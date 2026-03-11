@@ -50,7 +50,7 @@ export default function LoginPage() {
                 <div className="flex flex-col items-center gap-1 mb-6">
                     <div className="flex flex-row items-center gap-2">
                         <Box width={32} height={32} color="#0485f7" />
-                        <h1 className="text-3xl font-bold">NeoPOS</h1>
+                        <h1 className="text-3xl font-bold">NeoDelivery</h1>
                     </div>
                     <p className="text-gray-600 text-sm">
                         Gestão de vendas simplificada para pequenos negócios.

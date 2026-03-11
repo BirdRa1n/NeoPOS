@@ -124,7 +124,7 @@ function Sidebar({ activeTab, onTabChange, pendingCount, collapsed, storeName, u
             <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg,#6366F1,#8B5CF6)' }}>
               <Box width={16} height={16} color="#fff" />
             </div>
-            <span className="text-white font-bold text-sm tracking-wide truncate">NeoPOS</span>
+            <span className="text-white font-bold text-sm tracking-wide truncate">NeoDelivery</span>
           </div>
         )}
       </div>
