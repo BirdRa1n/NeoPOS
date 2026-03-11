@@ -46,17 +46,21 @@ export async function createStockMovement(data: Omit<StockMovement, 'id' | 'crea
 
   if (error) throw error;
 
-  if (data.movement_type === 'purchase') {
+  // Buscar o supply atual
+  const { data: supply } = await supabase
+    .schema('inventory')
+    .from('supplies')
+    .select('current_quantity')
+    .eq('id', data.supply_id)
+    .single();
+
+  if (supply) {
+    const newQuantity = supply.current_quantity + data.quantity;
+    
     await supabase
       .schema('inventory')
       .from('supplies')
-      .update({ current_quantity: supabase.raw(`current_quantity + ${data.quantity}`) })
-      .eq('id', data.supply_id);
-  } else if (data.movement_type === 'manual_out' || data.movement_type === 'adjustment') {
-    await supabase
-      .schema('inventory')
-      .from('supplies')
-      .update({ current_quantity: supabase.raw(`current_quantity + ${data.quantity}`) })
+      .update({ current_quantity: newQuantity })
       .eq('id', data.supply_id);
   }
 

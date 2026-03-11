@@ -645,7 +645,6 @@ const STATUS_CFG: Record<string, { label: string; dot: string; bgD: string; bgL:
   out_for_delivery: { label: 'Saiu para entrega', dot: '#6366F1', bgD: 'rgba(99,102,241,0.15)', bgL: 'rgba(99,102,241,0.1)', txD: '#A5B4FC', txL: '#3730A3' },
   delivered: { label: 'Entregue', dot: '#10B981', bgD: 'rgba(16,185,129,0.15)', bgL: 'rgba(16,185,129,0.1)', txD: '#6EE7B7', txL: '#065F46' },
   cancelled: { label: 'Cancelado', dot: '#EF4444', bgD: 'rgba(239,68,68,0.15)', bgL: 'rgba(239,68,68,0.1)', txD: '#FCA5A5', txL: '#991B1B' },
-  out_for_delivery: { label: 'Saiu', dot: '#6366F1', bgD: 'rgba(99,102,241,0.15)', bgL: 'rgba(99,102,241,0.1)', txD: '#A5B4FC', txL: '#3730A3' },
 };
 
 const STATUS_TABS: { value: OrderStatus | 'all'; label: string; icon: React.FC<any>; color: string }[] = [
