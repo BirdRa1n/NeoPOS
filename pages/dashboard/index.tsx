@@ -15,6 +15,8 @@ import { DeliveryView } from '@/components/views/DeliveryView';
 import { InventoryView } from '@/components/views/InventoryView';
 import { FinanceView } from '@/components/views/FinanceView';
 import { formatCurrency } from '@/lib/utils/format';
+import { StoreSettingsView } from '@/components/views/StoreSettingsView';
+import { Settings } from 'lucide-react'; // adicionar Settings aos imports do lucide
 import {
   LayoutDashboard, Package, ShoppingCart, Users, Truck,
   Warehouse, DollarSign, LogOut, Bell, ChevronRight,
@@ -67,8 +69,7 @@ const THEMES: Record<Theme, Record<string, string>> = {
 };
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-type TabId = 'dashboard' | 'products' | 'orders' | 'customers' | 'delivery' | 'inventory' | 'finance';
-
+type TabId = 'dashboard' | 'products' | 'orders' | 'customers' | 'delivery' | 'inventory' | 'finance' | 'settings';
 // ─── Status map ───────────────────────────────────────────────────────────────
 const STATUS_MAP: Record<string, { label: string; dot: string; bgD: string; bgL: string; txD: string; txL: string }> = {
   pending: { label: 'Pendente', dot: '#F59E0B', bgD: 'rgba(245,158,11,0.15)', bgL: 'rgba(245,158,11,0.1)', txD: '#FCD34D', txL: '#92400E' },
@@ -103,6 +104,7 @@ const NAV: { id: TabId; label: string; icon: React.FC<any> }[] = [
   { id: 'delivery', label: 'Entregas', icon: Truck },
   { id: 'inventory', label: 'Estoque', icon: Warehouse },
   { id: 'finance', label: 'Financeiro', icon: DollarSign },
+  { id: 'settings', label: 'Configurações', icon: Settings },
 ];
 
 function Sidebar({ activeTab, onTabChange, pendingCount, collapsed, storeName, userEmail, onSignOut }: {
@@ -547,6 +549,7 @@ const PAGE_META: Record<TabId, { title: string; subtitle: string }> = {
   delivery: { title: 'Entregas', subtitle: 'Monitoramento em tempo real' },
   inventory: { title: 'Estoque', subtitle: 'Controle de insumos' },
   finance: { title: 'Financeiro', subtitle: 'Relatórios e receitas' },
+  settings: { title: 'Configurações', subtitle: 'Personalize sua loja' }
 };
 
 // ─── Root ─────────────────────────────────────────────────────────────────────
@@ -591,6 +594,7 @@ export default function DashboardPage() {
       case 'delivery': return <DeliveryView />;
       case 'inventory': return <InventoryView />;
       case 'finance': return <FinanceView />;
+      case 'settings': return <StoreSettingsView />;
     }
   };
 
