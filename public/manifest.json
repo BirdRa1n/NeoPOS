@@ -1,6 +1,6 @@
 {
-  "name": "NeoPOS - Sistema de Gestão",
-  "short_name": "NeoPOS",
+  "name": "NeoDelivery - Sistema de Gestão",
+  "short_name": "NeoDelivery",
   "description": "Sistema completo de gestão para restaurantes e delivery",
   "start_url": "/",
   "display": "standalone",
