@@ -1,183 +1,237 @@
 import { useState } from 'react';
-import { useFinance } from '@/hooks/useFinance';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { DollarSign, TrendingUp, TrendingDown, CreditCard, Banknote, Smartphone, Calendar } from 'lucide-react';
+import { useFinance, useDailySummaries } from '@/hooks/useFinance';
+import { formatCurrency, formatDate } from '@/lib/utils/format';
+import {
+  DollarSign, TrendingUp, TrendingDown, CreditCard,
+  Banknote, Smartphone, Calendar, BarChart3, ArrowUpRight, Receipt
+} from 'lucide-react';
+
+function useIsDark(): boolean {
+  if (typeof window === 'undefined') return true;
+  return (getComputedStyle(document.documentElement).getPropertyValue('--bg') || '').trim().startsWith('#08');
+}
+
+type Period = 'today' | 'week' | 'month';
+const PERIOD_DAYS: Record<Period, number> = { today: 1, week: 7, month: 30 };
+const PERIOD_LABELS: Record<Period, string> = { today: 'Hoje', week: 'Esta Semana', month: 'Este Mês' };
 
 export function FinanceView() {
-  const { summary, loading } = useFinance();
-  const [period, setPeriod] = useState<'today' | 'week' | 'month'>('today');
+  const isDark = useIsDark();
+  const [period, setPeriod] = useState<Period>('today');
 
-  if (loading) return <LoadingSpinner />;
+  const days = PERIOD_DAYS[period];
+  const startDate = new Date(Date.now() - (days - 1) * 86400000).toISOString().split('T')[0];
+  const { summaries, loading } = useDailySummaries(startDate);
 
-  const revenue = summary?.total_revenue || 0;
-  const expenses = summary?.total_discount || 0;
-  const profit = revenue - expenses;
-  const profitMargin = revenue > 0 ? ((profit / revenue) * 100).toFixed(1) : '0';
+  const totals = summaries.reduce((acc, s) => ({
+    orders: acc.orders + (s.total_orders ?? 0),
+    gross: acc.gross + (s.gross_revenue ?? 0),
+    discount: acc.discount + ((s as any).total_discounts ?? (s as any).total_discount ?? 0),
+    fees: acc.fees + (s.total_delivery_fees ?? 0),
+    net: acc.net + (s.net_revenue ?? 0),
+    cash: acc.cash + ((s as any).cash_revenue ?? 0),
+    card: acc.card + ((s as any).card_revenue ?? 0),
+    pix: acc.pix + ((s as any).pix_revenue ?? 0),
+  }), { orders: 0, gross: 0, discount: 0, fees: 0, net: 0, cash: 0, card: 0, pix: 0 });
+
+  const avgTicket = totals.orders > 0 ? totals.gross / totals.orders : 0;
+  const margin = totals.gross > 0 ? ((totals.net / totals.gross) * 100).toFixed(1) : '0';
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+    </div>
+  );
+
+  const PAYMENT_METHODS = [
+    { label: 'Dinheiro', value: totals.cash, color: '#10B981', icon: Banknote, pct: totals.gross > 0 ? (totals.cash / totals.gross) * 100 : 0 },
+    { label: 'Cartão', value: totals.card, color: '#6366F1', icon: CreditCard, pct: totals.gross > 0 ? (totals.card / totals.gross) * 100 : 0 },
+    { label: 'PIX', value: totals.pix, color: '#8B5CF6', icon: Smartphone, pct: totals.gross > 0 ? (totals.pix / totals.gross) * 100 : 0 },
+  ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Financeiro</h1>
-          <p className="text-sm text-gray-600 mt-1">Acompanhe suas finanças e relatórios</p>
-        </div>
-        <select
-          value={period}
-          onChange={(e) => setPeriod(e.target.value as 'today' | 'week' | 'month')}
-          className="px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        >
-          <option value="today">Hoje</option>
-          <option value="week">Esta Semana</option>
-          <option value="month">Este Mês</option>
-        </select>
-      </div>
-
-      {/* Main Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
-          <div className="flex items-center justify-between mb-4">
-            <div className="h-12 w-12 bg-white/20 rounded-xl flex items-center justify-center">
-              <DollarSign size={24} />
-            </div>
-            <TrendingUp size={20} className="opacity-80" />
-          </div>
-          <p className="text-sm opacity-90 mb-1">Receita Total</p>
-          <p className="text-3xl font-bold">R$ {revenue.toFixed(2)}</p>
-          <p className="text-xs opacity-75 mt-2">+12% vs período anterior</p>
+          <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Financeiro</h1>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Acompanhe receitas e relatórios</p>
         </div>
 
-        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl shadow-lg p-6 text-white">
-          <div className="flex items-center justify-between mb-4">
-            <div className="h-12 w-12 bg-white/20 rounded-xl flex items-center justify-center">
-              <TrendingUp size={24} />
-            </div>
-          </div>
-          <p className="text-sm opacity-90 mb-1">Lucro Líquido</p>
-          <p className="text-3xl font-bold">R$ {profit.toFixed(2)}</p>
-          <p className="text-xs opacity-75 mt-2">Margem: {profitMargin}%</p>
-        </div>
-
-        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
-          <div className="flex items-center justify-between mb-4">
-            <div className="h-12 w-12 bg-white/20 rounded-xl flex items-center justify-center">
-              <TrendingDown size={24} />
-            </div>
-          </div>
-          <p className="text-sm opacity-90 mb-1">Despesas</p>
-          <p className="text-3xl font-bold">R$ {expenses.toFixed(2)}</p>
-          <p className="text-xs opacity-75 mt-2">-5% vs período anterior</p>
-        </div>
-
-        <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl shadow-lg p-6 text-white">
-          <div className="flex items-center justify-between mb-4">
-            <div className="h-12 w-12 bg-white/20 rounded-xl flex items-center justify-center">
-              <Calendar size={24} />
-            </div>
-          </div>
-          <p className="text-sm opacity-90 mb-1">Ticket Médio</p>
-          <p className="text-3xl font-bold">R$ {summary?.total_orders ? (revenue / summary.total_orders).toFixed(2) : '0.00'}</p>
-          <p className="text-xs opacity-75 mt-2">{summary?.total_orders || 0} pedidos</p>
+        {/* Period selector */}
+        <div className="flex items-center gap-1 p-1 rounded-xl"
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+          {(Object.keys(PERIOD_LABELS) as Period[]).map(p => (
+            <button key={p} onClick={() => setPeriod(p)}
+              className="px-4 py-1.5 rounded-lg text-xs font-semibold transition-all"
+              style={{
+                background: period === p ? (isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.12)') : 'transparent',
+                color: period === p ? '#818CF8' : 'var(--text-muted)',
+              }}>
+              {PERIOD_LABELS[p]}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Payment Methods */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Receita por Método de Pagamento</h2>
+      {/* KPI cards */}
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+        {[
+          { label: 'Receita Bruta', value: formatCurrency(totals.gross), icon: DollarSign, color: '#6366F1', sub: `${totals.orders} pedidos` },
+          { label: 'Receita Líquida', value: formatCurrency(totals.net), icon: TrendingUp, color: '#10B981', sub: `Margem ${margin}%` },
+          { label: 'Descontos', value: formatCurrency(totals.discount), icon: TrendingDown, color: '#EF4444', sub: 'Total de desconto' },
+          { label: 'Ticket Médio', value: formatCurrency(avgTicket), icon: BarChart3, color: '#F59E0B', sub: `${totals.orders} pedidos` },
+        ].map(({ label, value, icon: Icon, color, sub }) => (
+          <div key={label} className="rounded-2xl p-5 relative overflow-hidden transition-all hover:-translate-y-0.5"
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--surface-box)' }}>
+            <div className="absolute top-0 right-0 w-24 h-24 rounded-full opacity-[0.06] blur-2xl pointer-events-none"
+              style={{ background: color, transform: 'translate(35%,-35%)' }} />
+            <div className="flex items-start justify-between mb-4">
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `${color}18` }}>
+                <Icon size={17} style={{ color }} />
+              </div>
+              <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{sub}</span>
+            </div>
+            <p className="text-2xl font-bold tracking-tight mb-1" style={{ color: 'var(--text-primary)' }}>{value}</p>
+            <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Middle row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+        {/* Payment methods */}
+        <div className="rounded-2xl p-5"
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--surface-box)' }}>
+          <div className="flex items-center gap-2.5 mb-5">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(99,102,241,0.15)' }}>
+              <CreditCard size={14} className="text-indigo-400" />
+            </div>
+            <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Métodos de Pagamento</span>
+          </div>
+
           <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 bg-green-500 rounded-lg flex items-center justify-center">
-                  <Banknote className="text-white" size={20} />
+            {PAYMENT_METHODS.map(({ label, value, color, icon: Icon, pct }) => (
+              <div key={label}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: `${color}18` }}>
+                      <Icon size={15} style={{ color }} />
+                    </div>
+                    <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>{label}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{formatCurrency(value)}</span>
+                    <span className="text-xs font-semibold w-10 text-right" style={{ color }}>
+                      {pct.toFixed(0)}%
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium text-gray-900">Dinheiro</p>
-                  <p className="text-sm text-gray-600">R$ {(summary?.cash_revenue || 0).toFixed(2)}</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-lg font-bold text-gray-900">
-                  {revenue > 0 ? ((summary?.cash_revenue || 0) / revenue * 100).toFixed(0) : 0}%
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 bg-blue-500 rounded-lg flex items-center justify-center">
-                  <CreditCard className="text-white" size={20} />
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">Cartão</p>
-                  <p className="text-sm text-gray-600">R$ {(summary?.card_revenue || 0).toFixed(2)}</p>
+                <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--bar-track)' }}>
+                  <div className="h-full rounded-full transition-all duration-700"
+                    style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${color}99, ${color})` }} />
                 </div>
               </div>
-              <div className="text-right">
-                <p className="text-lg font-bold text-gray-900">
-                  {revenue > 0 ? ((summary?.card_revenue || 0) / revenue * 100).toFixed(0) : 0}%
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 bg-purple-500 rounded-lg flex items-center justify-center">
-                  <Smartphone className="text-white" size={20} />
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">PIX</p>
-                  <p className="text-sm text-gray-600">R$ {(summary?.pix_revenue || 0).toFixed(2)}</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-lg font-bold text-gray-900">
-                  {revenue > 0 ? ((summary?.pix_revenue || 0) / revenue * 100).toFixed(0) : 0}%
-                </p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
-        {/* Recent Transactions */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Resumo Financeiro</h2>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-              <div>
-                <p className="text-sm text-gray-600">Receita Bruta</p>
-                <p className="text-xl font-bold text-gray-900">R$ {revenue.toFixed(2)}</p>
-              </div>
-              <TrendingUp className="text-green-500" size={24} />
+        {/* Summary breakdown */}
+        <div className="rounded-2xl p-5"
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--surface-box)' }}>
+          <div className="flex items-center gap-2.5 mb-5">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(16,185,129,0.15)' }}>
+              <Receipt size={14} style={{ color: '#10B981' }} />
             </div>
+            <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Resumo do Período</span>
+          </div>
 
-            <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-              <div>
-                <p className="text-sm text-gray-600">Descontos</p>
-                <p className="text-xl font-bold text-gray-900">R$ {(summary?.total_discount || 0).toFixed(2)}</p>
+          <div className="space-y-3">
+            {[
+              { label: 'Receita Bruta', value: totals.gross, color: '#6366F1', positive: true },
+              { label: 'Descontos', value: -totals.discount, color: '#EF4444', positive: false },
+              { label: 'Taxa de Entrega', value: totals.fees, color: '#F59E0B', positive: true },
+            ].map(({ label, value, color, positive }) => (
+              <div key={label} className="flex items-center justify-between px-3 py-3 rounded-xl"
+                style={{ background: isDark ? `${color}08` : `${color}05`, border: `1px solid ${color}18` }}>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full" style={{ background: color }} />
+                  <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>{label}</span>
+                </div>
+                <span className="text-sm font-bold" style={{ color }}>
+                  {positive ? '+' : ''}{formatCurrency(Math.abs(value))}
+                </span>
               </div>
-              <TrendingDown className="text-red-500" size={24} />
-            </div>
+            ))}
 
-            <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-              <div>
-                <p className="text-sm text-gray-600">Taxa de Entrega</p>
-                <p className="text-xl font-bold text-gray-900">R$ {(summary?.total_delivery_fees || 0).toFixed(2)}</p>
+            {/* Net highlight */}
+            <div className="flex items-center justify-between px-3 py-4 rounded-xl"
+              style={{
+                background: isDark ? 'rgba(16,185,129,0.1)' : 'rgba(16,185,129,0.07)',
+                border: '1px solid rgba(16,185,129,0.25)',
+              }}>
+              <div className="flex items-center gap-2">
+                <TrendingUp size={16} style={{ color: '#10B981' }} />
+                <span className="text-sm font-bold" style={{ color: isDark ? '#6EE7B7' : '#065F46' }}>Receita Líquida</span>
               </div>
-              <DollarSign className="text-blue-500" size={24} />
-            </div>
-
-            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border-2 border-blue-200">
-              <div>
-                <p className="text-sm font-medium text-gray-700">Receita Líquida</p>
-                <p className="text-2xl font-bold text-blue-600">R$ {profit.toFixed(2)}</p>
-              </div>
-              <div className="h-12 w-12 bg-blue-500 rounded-xl flex items-center justify-center">
-                <DollarSign className="text-white" size={24} />
-              </div>
+              <span className="text-lg font-bold" style={{ color: '#10B981' }}>{formatCurrency(totals.net)}</span>
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Daily history table */}
+      <div className="rounded-2xl overflow-hidden"
+        style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--surface-box)' }}>
+        <div className="flex items-center gap-2.5 px-5 pt-5 pb-4">
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(99,102,241,0.15)' }}>
+            <Calendar size={14} className="text-indigo-400" />
+          </div>
+          <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Histórico Diário</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                {['Data', 'Pedidos', 'Receita Bruta', 'Descontos', 'Taxa Entrega', 'Líquido'].map(h => (
+                  <th key={h} className="px-5 py-3 text-left text-[11px] font-bold uppercase tracking-wider"
+                    style={{ color: 'var(--text-label)' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {summaries.map(s => (
+                <tr key={s.id} className="transition-colors"
+                  style={{ borderBottom: '1px solid var(--border-soft)' }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--surface-hover)'}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
+                  <td className="px-5 py-3.5 font-medium" style={{ color: 'var(--text-primary)' }}>{formatDate(s.date)}</td>
+                  <td className="px-5 py-3.5">
+                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-xl text-xs font-bold"
+                      style={{ background: isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.08)', color: '#818CF8' }}>
+                      {s.total_orders}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3.5 font-semibold" style={{ color: 'var(--text-primary)' }}>{formatCurrency(s.gross_revenue)}</td>
+                  <td className="px-5 py-3.5" style={{ color: isDark ? '#FCA5A5' : '#DC2626' }}>
+                    {formatCurrency((s as any).total_discounts ?? (s as any).total_discount ?? 0)}
+                  </td>
+                  <td className="px-5 py-3.5" style={{ color: isDark ? '#FCD34D' : '#D97706' }}>{formatCurrency(s.total_delivery_fees)}</td>
+                  <td className="px-5 py-3.5 font-bold" style={{ color: '#10B981' }}>{formatCurrency(s.net_revenue)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {summaries.length === 0 && (
+          <div className="flex flex-col items-center py-16 gap-3">
+            <BarChart3 size={32} style={{ color: 'var(--text-muted)', opacity: 0.4 }} />
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Sem dados para o período selecionado</p>
+          </div>
+        )}
       </div>
     </div>
   );

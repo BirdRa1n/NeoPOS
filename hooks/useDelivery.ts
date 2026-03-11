@@ -8,25 +8,25 @@ export function useDeliveryZones() {
   const [zones, setZones] = useState<DeliveryZone[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetch = async () => {
     if (!store) return;
+    setLoading(true);
+    const { data } = await supabase
+      .schema('core')
+      .from('delivery_zones')
+      .select('*')
+      .eq('store_id', store.id)
+      .order('neighborhood');
 
-    const fetch = async () => {
-      const { data } = await supabase
-        .schema('core')
-        .from('delivery_zones')
-        .select('*')
-        .eq('store_id', store.id)
-        .order('neighborhood');
+    if (data) setZones(data);
+    setLoading(false);
+  };
 
-      if (data) setZones(data);
-      setLoading(false);
-    };
-
+  useEffect(() => {
     fetch();
   }, [store]);
 
-  return { zones, loading };
+  return { zones, loading, refetch: fetch };
 }
 
 export function useDeliveryDrivers() {
@@ -34,23 +34,23 @@ export function useDeliveryDrivers() {
   const [drivers, setDrivers] = useState<DeliveryDriver[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetch = async () => {
     if (!store) return;
+    setLoading(true);
+    const { data } = await supabase
+      .schema('core')
+      .from('delivery_drivers')
+      .select('*')
+      .eq('store_id', store.id)
+      .order('name');
 
-    const fetch = async () => {
-      const { data } = await supabase
-        .schema('core')
-        .from('delivery_drivers')
-        .select('*')
-        .eq('store_id', store.id)
-        .order('name');
+    if (data) setDrivers(data);
+    setLoading(false);
+  };
 
-      if (data) setDrivers(data);
-      setLoading(false);
-    };
-
+  useEffect(() => {
     fetch();
   }, [store]);
 
-  return { drivers, loading };
+  return { drivers, loading, refetch: fetch };
 }

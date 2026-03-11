@@ -8,25 +8,25 @@ export function useProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetch = async () => {
     if (!store) return;
+    setLoading(true);
+    const { data } = await supabase
+      .schema('catalog')
+      .from('products')
+      .select('*,product_images(*)')
+      .eq('store_id', store.id)
+      .order('sort_order');
 
-    const fetch = async () => {
-      const { data } = await supabase
-        .schema('catalog')
-        .from('products')
-        .select('*,product_images(*)')
-        .eq('store_id', store.id)
-        .order('sort_order');
+    if (data) setProducts(data);
+    setLoading(false);
+  };
 
-      if (data) setProducts(data);
-      setLoading(false);
-    };
-
+  useEffect(() => {
     fetch();
   }, [store]);
 
-  return { products, loading };
+  return { products, loading, refetch: fetch };
 }
 
 export function useCategories() {
@@ -34,25 +34,25 @@ export function useCategories() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetch = async () => {
     if (!store) return;
+    setLoading(true);
+    const { data } = await supabase
+      .schema('catalog')
+      .from('categories')
+      .select('*')
+      .eq('store_id', store.id)
+      .order('sort_order');
 
-    const fetch = async () => {
-      const { data } = await supabase
-        .schema('catalog')
-        .from('categories')
-        .select('*')
-        .eq('store_id', store.id)
-        .order('sort_order');
+    if (data) setCategories(data);
+    setLoading(false);
+  };
 
-      if (data) setCategories(data);
-      setLoading(false);
-    };
-
+  useEffect(() => {
     fetch();
   }, [store]);
 
-  return { categories, loading };
+  return { categories, loading, refetch: fetch };
 }
 
 export function useProductImages(productId: string) {

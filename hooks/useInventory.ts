@@ -12,25 +12,25 @@ export function useSupplies() {
   const [supplies, setSupplies] = useState<Supply[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetch = async () => {
     if (!store) return;
+    setLoading(true);
+    const { data } = await supabase
+      .schema('inventory')
+      .from('supplies')
+      .select('*')
+      .eq('store_id', store.id)
+      .order('name');
+    
+    if (data) setSupplies(data);
+    setLoading(false);
+  };
 
-    const fetch = async () => {
-      const { data } = await supabase
-        .schema('inventory')
-        .from('supplies')
-        .select('*')
-        .eq('store_id', store.id)
-        .order('name');
-      
-      if (data) setSupplies(data);
-      setLoading(false);
-    };
-
+  useEffect(() => {
     fetch();
   }, [store]);
 
-  return { supplies, loading };
+  return { supplies, loading, refetch: fetch };
 }
 
 export function useLowStockAlerts() {

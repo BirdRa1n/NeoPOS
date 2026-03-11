@@ -17,8 +17,8 @@ export interface Product {
   created_at: string; category?: Category
 }
 export interface Addon { id: string; group_id: string; name: string; price: number; is_active: boolean; sort_order: number }
-export type OrderStatus = 'pending'|'confirmed'|'preparing'|'ready'|'delivering'|'delivered'|'cancelled'
-export type OrderType = 'dine_in'|'takeout'|'delivery'
+export type OrderStatus = 'pending'|'confirmed'|'preparing'|'out_for_delivery'|'delivered'|'cancelled'
+export type OrderType = 'delivery'|'pickup'|'table'
 export type PaymentMethod = 'cash'|'credit_card'|'debit_card'|'pix'|'voucher'
 export interface Order {
   id: string; store_id: string; customer_id?: string; order_number: number

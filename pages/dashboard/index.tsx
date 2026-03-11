@@ -83,7 +83,7 @@ const STATUS_MAP: Record<string, { label: string; dot: string; bgD: string; bgL:
 
 function StatusBadge({ status }: { status: string }) {
   const { theme } = useTheme();
-  const isDark = theme === 'dark';
+  const isDark = theme === 'light';
   const cfg = STATUS_MAP[status] ?? { label: status, dot: '#6B7280', bgD: 'rgba(107,114,128,0.15)', bgL: 'rgba(107,114,128,0.1)', txD: '#D1D5DB', txL: '#374151' };
   return (
     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap"
@@ -562,13 +562,13 @@ export default function DashboardPage() {
 
   // Persist theme
   useEffect(() => {
-    const saved = (typeof window !== 'undefined' ? localStorage.getItem('neopos-theme') : null) as Theme | null;
+    const saved = (typeof window !== 'undefined' ? localStorage.getItem('theme') : null) as Theme | null;
     if (saved === 'light' || saved === 'dark') setTheme(saved);
   }, []);
 
   const toggleTheme = () => setTheme(t => {
     const next: Theme = t === 'dark' ? 'light' : 'dark';
-    if (typeof window !== 'undefined') localStorage.setItem('neopos-theme', next);
+    if (typeof window !== 'undefined') localStorage.setItem('theme', next);
     return next;
   });
 
