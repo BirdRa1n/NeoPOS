@@ -112,7 +112,7 @@ const T = {
     },
 } as const;
 
-type Tok = typeof T['dark'];
+type Tok = typeof T['dark'] | typeof T['light'];
 type AuthStep = 'auth' | 'verify-email' | 'create-store' | 'done' | 'forgot-password';
 type StoreCategory = 'food' | 'retail' | 'services' | 'other';
 
