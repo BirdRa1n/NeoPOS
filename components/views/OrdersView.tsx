@@ -149,7 +149,7 @@ function OrderModal({ storeId, onClose, onSuccess }: { storeId: string; onClose:
   const [items, setItems] = useState<{ product_id: string; quantity: number; price: number }[]>([]);
   const [searchProduct, setSearchProduct] = useState('');
 
-  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => 
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }));
 
   const addItem = (product: any) => {
@@ -177,20 +177,20 @@ function OrderModal({ storeId, onClose, onSuccess }: { storeId: string; onClose:
   const deliveryFee = form.order_type === 'delivery' ? (selectedZone?.delivery_fee || 0) : 0;
   const total = subtotal + deliveryFee;
 
-  const filteredProducts = products.filter((p: any) => 
-    p.name.toLowerCase().includes(searchProduct.toLowerCase()) && 
+  const filteredProducts = products.filter((p: any) =>
+    p.name.toLowerCase().includes(searchProduct.toLowerCase()) &&
     !items.find(i => i.product_id === p.id)
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (items.length === 0) return alert('Adicione pelo menos um produto');
-    
+
     // Validação: delivery precisa de cliente
     if (form.order_type === 'delivery' && !form.customer_id && !form.customer_name) {
       return alert('Informe o cliente para pedidos de entrega');
     }
-    
+
     setSaving(true);
     try {
       let customerId = form.customer_id;
@@ -352,7 +352,7 @@ function OrderModal({ storeId, onClose, onSuccess }: { storeId: string; onClose:
 
             <div style={{ height: 1, background: 'var(--border)' }} />
             <SectionLabel label="Produtos" color="#10B981" />
-            
+
             <Field label="Buscar Produto">
               <div className="relative">
                 <Input icon={Search} value={searchProduct} onChange={e => setSearchProduct(e.target.value)} placeholder="Digite para buscar..." />
@@ -494,6 +494,20 @@ function OrderDetailsModal({ order, onClose, onStatusChange }: { order: any; onC
     finally { setUpdating(false); }
   };
 
+  const handleMarkAsDelivered = async () => {
+    setUpdating(true);
+    try {
+      const { error } = await supabase.schema('orders')
+        .from('orders')
+        .update({ status: 'delivered' })
+        .eq('id', order.id);
+      if (error) throw error;
+      order.status = 'delivered';
+      onStatusChange();
+    } catch (err: any) { alert(err.message); }
+    finally { setUpdating(false); }
+  }
+
   const statusFlow = ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'delivered'];
   const currentIndex = statusFlow.indexOf(order.status);
   const nextStatus = statusFlow[currentIndex + 1];
@@ -502,12 +516,12 @@ function OrderDetailsModal({ order, onClose, onStatusChange }: { order: any; onC
   return (
     <Backdrop onClose={onClose}>
       <Shell maxW="max-w-2xl">
-        <MHead 
-          title={`Pedido #${order.order_number || order.id.slice(0, 6)}`} 
+        <MHead
+          title={`Pedido #${order.order_number || order.id.slice(0, 6)}`}
           subtitle={`Criado em ${new Date(order.created_at).toLocaleString('pt-BR')}`}
-          icon={ShoppingCart} 
-          iconColor="#6366F1" 
-          onClose={onClose} 
+          icon={ShoppingCart}
+          iconColor="#6366F1"
+          onClose={onClose}
         />
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
           {/* Status */}
@@ -532,7 +546,13 @@ function OrderDetailsModal({ order, onClose, onStatusChange }: { order: any; onC
                   </button>
                 )}
               </div>
+
+              <button onClick={handleMarkAsDelivered} style={{ background: 'rgba(16,185,129,0.06)', color: '#10B981' }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all disabled:opacity-50">
+                <CheckCircle2 size={12} />
+                Marcar como entregue
+              </button>
             </div>
+
           </div>
 
           {/* Cliente */}
@@ -869,19 +889,19 @@ export function OrdersView() {
 
       {/* Modal Criar */}
       {showModal && store && (
-        <OrderModal 
-          storeId={store.id} 
-          onClose={() => setShowModal(false)} 
-          onSuccess={async () => { 
-            await refetch?.(); 
-            setShowModal(false); 
-          }} 
+        <OrderModal
+          storeId={store.id}
+          onClose={() => setShowModal(false)}
+          onSuccess={async () => {
+            await refetch?.();
+            setShowModal(false);
+          }}
         />
       )}
 
       {/* Modal Detalhes */}
       {showDetailsModal && selectedOrder && (
-        <OrderDetailsModal 
+        <OrderDetailsModal
           order={selectedOrder}
           onClose={() => { setShowDetailsModal(false); setSelectedOrder(null); }}
           onStatusChange={async () => { await refetch?.(); }}
