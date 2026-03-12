@@ -107,17 +107,25 @@ const NAV: { id: TabId; label: string; icon: React.FC<any> }[] = [
   { id: 'settings', label: 'Configurações', icon: Settings },
 ];
 
-function Sidebar({ activeTab, onTabChange, pendingCount, collapsed, storeName, userEmail, onSignOut }: {
+function Sidebar({ activeTab, onTabChange, pendingCount, collapsed, storeName, userEmail, onSignOut, isMobile }: {
   activeTab: TabId; onTabChange: (id: TabId) => void; pendingCount: number;
-  collapsed: boolean; storeName: string; userEmail: string; onSignOut: () => void;
+  collapsed: boolean; storeName: string; userEmail: string; onSignOut: () => void; isMobile: boolean;
 }) {
   return (
-    <aside className="fixed left-0 top-0 h-screen z-50 flex flex-col transition-all duration-300 ease-[cubic-bezier(.4,0,.2,1)] shrink-0"
-      style={{ width: collapsed ? 72 : 240, background: 'linear-gradient(180deg,#0F1117 0%,#0A0D14 100%)', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
+    <aside className={`fixed left-0 top-0 h-screen z-50 flex flex-col transition-all duration-300 ease-[cubic-bezier(.4,0,.2,1)] shrink-0 ${
+      isMobile 
+        ? (collapsed ? '-translate-x-full w-64' : 'translate-x-0 w-64')
+        : 'translate-x-0'
+    }`}
+      style={{ 
+        width: isMobile ? 240 : (collapsed ? 72 : 240), 
+        background: 'linear-gradient(180deg,#0F1117 0%,#0A0D14 100%)', 
+        borderRight: '1px solid rgba(255,255,255,0.05)' 
+      }}>
 
       {/* Logo */}
       <div className="h-16 flex items-center px-4 shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-        {collapsed ? (
+        {(collapsed && !isMobile) ? (
           <div className="mx-auto w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#6366F1,#8B5CF6)' }}>
             <Box width={16} height={16} color="#fff" />
           </div>
@@ -132,7 +140,7 @@ function Sidebar({ activeTab, onTabChange, pendingCount, collapsed, storeName, u
       </div>
 
       {/* Store pill */}
-      {!collapsed && (
+      {(!collapsed || isMobile) && (
         <div className="mx-3 mt-3 px-3 py-2 rounded-xl shrink-0"
           style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.15)' }}>
           <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest mb-0.5">Loja</p>
@@ -151,13 +159,13 @@ function Sidebar({ activeTab, onTabChange, pendingCount, collapsed, storeName, u
               style={{ background: active ? 'rgba(99,102,241,0.15)' : 'transparent' }}>
               {active && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full bg-indigo-400" />}
               <Icon size={17} className="shrink-0" style={{ color: active ? '#818CF8' : 'rgba(255,255,255,0.38)' }} />
-              {!collapsed && <span className="text-sm font-medium flex-1 truncate" style={{ color: active ? '#A5B4FC' : 'rgba(255,255,255,0.42)' }}>{label}</span>}
-              {!collapsed && badge > 0 && (
+              {(!collapsed || isMobile) && <span className="text-sm font-medium flex-1 truncate" style={{ color: active ? '#A5B4FC' : 'rgba(255,255,255,0.42)' }}>{label}</span>}
+              {(!collapsed || isMobile) && badge > 0 && (
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(239,68,68,0.2)', color: '#FCA5A5' }}>
                   {badge > 99 ? '99+' : badge}
                 </span>
               )}
-              {collapsed && badge > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500" />}
+              {(collapsed && !isMobile) && badge > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500" />}
             </button>
           );
         })}
@@ -165,7 +173,7 @@ function Sidebar({ activeTab, onTabChange, pendingCount, collapsed, storeName, u
 
       {/* User */}
       <div className="shrink-0 p-3" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-        {collapsed ? (
+        {(collapsed && !isMobile) ? (
           <button onClick={onSignOut}
             className="w-full flex justify-center p-2 rounded-xl transition-all"
             style={{ color: 'rgba(255,255,255,0.3)' }}
@@ -568,6 +576,20 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
   const [collapsed, setCollapsed] = useState(false);
   const [theme, setTheme] = useState<Theme>('dark');
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detecta mobile
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Mobile: sidebar fechado por padrão
+  useEffect(() => {
+    if (isMobile) setCollapsed(true);
+  }, [isMobile]);
 
   // Persist theme
   useEffect(() => {
@@ -618,6 +640,14 @@ export default function DashboardPage() {
         .neopos input::placeholder { color:var(--text-muted) !important; opacity:1; }
       `}</style>
 
+      {/* Overlay mobile */}
+      {isMobile && !collapsed && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 transition-opacity duration-300"
+          onClick={() => setCollapsed(true)}
+        />
+      )}
+
       <div className="neopos flex min-h-screen transition-colors duration-300"
         style={{ background: 'var(--bg)' }}>
 
@@ -629,10 +659,11 @@ export default function DashboardPage() {
           storeName={store?.name ?? 'Minha Loja'}
           userEmail={user.email ?? ''}
           onSignOut={signOut}
+          isMobile={isMobile}
         />
 
         <div className="flex flex-col flex-1 min-w-0 transition-all duration-300 ease-[cubic-bezier(.4,0,.2,1)]"
-          style={{ marginLeft: collapsed ? 72 : 240 }}>
+          style={{ marginLeft: isMobile ? 0 : (collapsed ? 72 : 240) }}>
           <Topbar
             onToggle={() => setCollapsed(c => !c)}
             title={title}
