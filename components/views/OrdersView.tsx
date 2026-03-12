@@ -15,6 +15,15 @@ import {
 } from 'lucide-react';
 import type { OrderStatus } from '@/types';
 
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { FormField } from '@/components/forms/FormField';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Card } from '@/components/ui/Card';
+import { ModalBackdrop, ModalShell, ModalHeader, ModalFooter } from '@/components/ui/Modal';
+import { Badge } from '@/components/ui/Badge';
+
+
 // ─── theme hook (mirrors dashboard) ──────────────────────────────────────────
 type Theme = 'dark' | 'light';
 declare module 'react' { interface Context<T> { } }
@@ -25,105 +34,12 @@ function useIsDark(): boolean {
 }
 
 // ─── Modal primitives ────────────────────────────────────────────────────────
-function Backdrop({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      {children}
-    </div>
-  );
-}
 
-function Shell({ children, maxW = 'max-w-lg' }: { children: React.ReactNode; maxW?: string }) {
-  const isDark = useIsDark();
-  return (
-    <div className={`w-full ${maxW} max-h-[92vh] flex flex-col rounded-2xl overflow-hidden`}
-      style={{ background: isDark ? '#0F1117' : '#FFFFFF', border: '1px solid var(--border)', boxShadow: isDark ? '0 24px 64px rgba(0,0,0,0.7)' : '0 24px 64px rgba(0,0,0,0.14)' }}>
-      {children}
-    </div>
-  );
-}
 
-function MHead({ title, subtitle, icon: Icon, iconColor = '#6366F1', onClose }: {
-  title: string; subtitle?: string; icon: React.FC<any>; iconColor?: string; onClose: () => void;
-}) {
-  const isDark = useIsDark();
-  return (
-    <div className="flex items-center justify-between px-6 py-4 shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: `linear-gradient(135deg,${iconColor},${iconColor}88)` }}>
-          <Icon size={15} color="#fff" />
-        </div>
-        <div>
-          <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{title}</h2>
-          {subtitle && <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{subtitle}</p>}
-        </div>
-      </div>
-      <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl transition-all" style={{ color: 'var(--text-muted)' }}
-        onMouseEnter={e => Object.assign((e.currentTarget as HTMLElement).style, { background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', color: 'var(--text-primary)' })}
-        onMouseLeave={e => Object.assign((e.currentTarget as HTMLElement).style, { background: 'transparent', color: 'var(--text-muted)' })}>
-        <X size={16} />
-      </button>
-    </div>
-  );
-}
 
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-        {label}{required && <span style={{ color: '#EF4444' }}>*</span>}
-      </label>
-      {children}
-    </div>
-  );
-}
 
-function Input({ icon: Icon, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { icon?: React.FC<any> }) {
-  return (
-    <div className="relative">
-      {Icon && <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><Icon size={13} style={{ color: 'var(--text-muted)' }} /></div>}
-      <input {...props}
-        className="w-full rounded-xl text-sm outline-none transition-all"
-        style={{ paddingLeft: Icon ? '2.25rem' : '0.875rem', paddingRight: '0.875rem', paddingTop: '0.6rem', paddingBottom: '0.6rem', background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}
-        onFocus={e => (e.currentTarget.style.borderColor = '#6366F1')}
-        onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')} />
-    </div>
-  );
-}
 
-function SectionLabel({ label, color = '#6366F1' }: { label: string; color?: string }) {
-  return (
-    <div className="flex items-center gap-3">
-      <p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color }}>{label}</p>
-      <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
-    </div>
-  );
-}
 
-function ModalFooter({ onCancel, saving, saveLabel, accentColor = '#6366F1' }: {
-  onCancel: () => void; saving: boolean; saveLabel: string; accentColor?: string;
-}) {
-  const isDark = useIsDark();
-  return (
-    <div className="flex items-center justify-end gap-2 px-6 py-4 shrink-0"
-      style={{ borderTop: '1px solid var(--border)', background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}>
-      <button type="button" onClick={onCancel}
-        className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-        style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
-        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--surface-hover)'}
-        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'var(--input-bg)'}>
-        Cancelar
-      </button>
-      <button type="submit" disabled={saving}
-        className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-all"
-        style={{ background: `linear-gradient(135deg,${accentColor},${accentColor}cc)`, boxShadow: `0 4px 14px ${accentColor}44` }}>
-        {saving ? <><Loader2 size={14} className="animate-spin" /> Salvando...</> : <><CheckCircle2 size={14} />{saveLabel}</>}
-      </button>
-    </div>
-  );
-}
 
 // ─── Order modal ──────────────────────────────────────────────────────────────
 function OrderModal({ storeId, onClose, onSuccess }: { storeId: string; onClose: () => void; onSuccess: () => void }) {
@@ -264,12 +180,12 @@ function OrderModal({ storeId, onClose, onSuccess }: { storeId: string; onClose:
   };
 
   return (
-    <Backdrop onClose={onClose}>
-      <Shell maxW="max-w-3xl">
-        <MHead title="Novo Pedido" subtitle="Registre um novo pedido" icon={ShoppingCart} iconColor="#6366F1" onClose={onClose} />
+    <ModalBackdrop onClose={onClose}>
+      <ModalShell maxW="max-w-3xl">
+        <ModalHeader title="Novo Pedido" subtitle="Registre um novo pedido" icon={ShoppingCart} onClose={onClose} />
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
           <div className="p-6 space-y-5">
-            <SectionLabel label="Tipo de Pedido" color="#6366F1" />
+            <div className="flex items-center gap-3"><p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#6366F1" }}>Tipo de Pedido</p><div className="flex-1 h-px" style={{ background: "var(--border)" }} /></div>
             <div className="grid grid-cols-3 gap-3">
               {[
                 { value: 'delivery', label: 'Entrega', icon: Truck },
@@ -290,9 +206,9 @@ function OrderModal({ storeId, onClose, onSuccess }: { storeId: string; onClose:
             </div>
 
             <div style={{ height: 1, background: 'var(--border)' }} />
-            <SectionLabel label="Cliente" color="#8B5CF6" />
+            <div className="flex items-center gap-3"><p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#8B5CF6" }}>Cliente</p><div className="flex-1 h-px" style={{ background: "var(--border)" }} /></div>
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Cliente Cadastrado">
+              <FormField label="Cliente Cadastrado">
                 <select value={form.customer_id} onChange={set('customer_id')}
                   className="w-full rounded-xl text-sm outline-none transition-all"
                   style={{ padding: '0.6rem 0.875rem', background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}
@@ -301,19 +217,19 @@ function OrderModal({ storeId, onClose, onSuccess }: { storeId: string; onClose:
                   <option value="">Novo cliente</option>
                   {customers.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
-              </Field>
-              <Field label="Nome" required={form.order_type === 'delivery' && !form.customer_id}>
+              </FormField>
+              <FormField label="Nome" required={form.order_type === 'delivery' && !form.customer_id}>
                 <Input icon={User} value={form.customer_name} onChange={set('customer_name')} placeholder="Nome do cliente" disabled={!!form.customer_id} required={form.order_type === 'delivery' && !form.customer_id} />
-              </Field>
+              </FormField>
             </div>
-            <Field label="Telefone">
+            <FormField label="Telefone">
               <Input icon={Phone} value={form.customer_phone} onChange={set('customer_phone')} placeholder="(00) 00000-0000" disabled={!!form.customer_id} />
-            </Field>
+            </FormField>
 
             {form.order_type === 'delivery' && (
               <>
                 <div className="grid grid-cols-2 gap-4">
-                  <Field label="Zona de Entrega">
+                  <FormField label="Zona de Entrega">
                     <select value={form.delivery_zone_id} onChange={set('delivery_zone_id')}
                       className="w-full rounded-xl text-sm outline-none transition-all"
                       style={{ padding: '0.6rem 0.875rem', background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}
@@ -324,8 +240,8 @@ function OrderModal({ storeId, onClose, onSuccess }: { storeId: string; onClose:
                         <option key={z.id} value={z.id}>{z.neighborhood} - {formatCurrency(z.delivery_fee)}</option>
                       ))}
                     </select>
-                  </Field>
-                  <Field label="Entregador">
+                  </FormField>
+                  <FormField label="Entregador">
                     <select value={form.driver_id} onChange={set('driver_id')}
                       className="w-full rounded-xl text-sm outline-none transition-all"
                       style={{ padding: '0.6rem 0.875rem', background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}
@@ -336,24 +252,24 @@ function OrderModal({ storeId, onClose, onSuccess }: { storeId: string; onClose:
                         <option key={d.id} value={d.id}>{d.name}</option>
                       ))}
                     </select>
-                  </Field>
+                  </FormField>
                 </div>
-                <Field label="Endereço de Entrega" required>
+                <FormField label="Endereço de Entrega" required>
                   <Input icon={MapPin} value={form.customer_address} onChange={set('customer_address')} placeholder="Rua, número, complemento" required />
-                </Field>
+                </FormField>
               </>
             )}
 
             {form.order_type === 'table' && (
-              <Field label="Número da Mesa">
+              <FormField label="Número da Mesa">
                 <Input value={form.table_number} onChange={set('table_number')} placeholder="Ex: 5" />
-              </Field>
+              </FormField>
             )}
 
             <div style={{ height: 1, background: 'var(--border)' }} />
-            <SectionLabel label="Produtos" color="#10B981" />
+            <div className="flex items-center gap-3"><p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#10B981" }}>Produtos</p><div className="flex-1 h-px" style={{ background: "var(--border)" }} /></div>
 
-            <Field label="Buscar Produto">
+            <FormField label="Buscar Produto">
               <div className="relative">
                 <Input icon={Search} value={searchProduct} onChange={e => setSearchProduct(e.target.value)} placeholder="Digite para buscar..." />
                 {searchProduct && filteredProducts.length > 0 && (
@@ -372,7 +288,7 @@ function OrderModal({ storeId, onClose, onSuccess }: { storeId: string; onClose:
                   </div>
                 )}
               </div>
-            </Field>
+            </FormField>
 
             {items.length > 0 && (
               <div className="space-y-2">
@@ -413,8 +329,8 @@ function OrderModal({ storeId, onClose, onSuccess }: { storeId: string; onClose:
             )}
 
             <div style={{ height: 1, background: 'var(--border)' }} />
-            <SectionLabel label="Pagamento" color="#F59E0B" />
-            <Field label="Forma de Pagamento" required>
+            <div className="flex items-center gap-3"><p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#F59E0B" }}>Pagamento</p><div className="flex-1 h-px" style={{ background: "var(--border)" }} /></div>
+            <FormField label="Forma de Pagamento" required>
               <select value={form.payment_method} onChange={set('payment_method')}
                 className="w-full rounded-xl text-sm outline-none transition-all"
                 style={{ padding: '0.6rem 0.875rem', background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}
@@ -425,15 +341,15 @@ function OrderModal({ storeId, onClose, onSuccess }: { storeId: string; onClose:
                 <option value="debit_card">Cartão de Débito</option>
                 <option value="pix">PIX</option>
               </select>
-            </Field>
-            <Field label="Observações">
+            </FormField>
+            <FormField label="Observações">
               <textarea value={form.notes} onChange={set('notes')}
                 className="w-full rounded-xl text-sm outline-none transition-all resize-none"
                 style={{ padding: '0.6rem 0.875rem', background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)', minHeight: '80px' }}
                 placeholder="Observações sobre o pedido..."
                 onFocus={e => (e.currentTarget.style.borderColor = '#F59E0B')}
                 onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')} />
-            </Field>
+            </FormField>
 
             <div className="rounded-xl p-4" style={{ background: isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.2)' }}>
               <div className="flex justify-between mb-2">
@@ -452,10 +368,10 @@ function OrderModal({ storeId, onClose, onSuccess }: { storeId: string; onClose:
               </div>
             </div>
           </div>
-          <ModalFooter onCancel={onClose} saving={saving} saveLabel="Criar Pedido" accentColor="#6366F1" />
+          <ModalFooter onCancel={onClose} onSubmit={() => {}} saving={saving} saveLabel="Criar Pedido" />
         </form>
-      </Shell>
-    </Backdrop>
+      </ModalShell>
+    </ModalBackdrop>
   );
 }
 
@@ -514,19 +430,13 @@ function OrderDetailsModal({ order, onClose, onStatusChange }: { order: any; onC
   const prevStatus = statusFlow[currentIndex - 1];
 
   return (
-    <Backdrop onClose={onClose}>
-      <Shell maxW="max-w-2xl">
-        <MHead
-          title={`Pedido #${order.order_number || order.id.slice(0, 6)}`}
-          subtitle={`Criado em ${new Date(order.created_at).toLocaleString('pt-BR')}`}
-          icon={ShoppingCart}
-          iconColor="#6366F1"
-          onClose={onClose}
-        />
+    <ModalBackdrop onClose={onClose}>
+      <ModalShell maxW="max-w-2xl">
+        <ModalHeader title={`Pedido #${order.order_number || order.id.slice(0, 6)}`} subtitle={`Criado em ${new Date(order.created_at).toLocaleString('pt-BR')}`} icon={ShoppingCart} onClose={onClose} />
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
           {/* Status */}
           <div>
-            <SectionLabel label="Status do Pedido" color="#6366F1" />
+            <div className="flex items-center gap-3"><p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#6366F1" }}>Status do Pedido</p><div className="flex-1 h-px" style={{ background: "var(--border)" }} /></div>
             <div className="mt-3 flex items-center gap-3">
               <StatusBadge status={order.status} />
               <div className="flex gap-2">
@@ -557,7 +467,7 @@ function OrderDetailsModal({ order, onClose, onStatusChange }: { order: any; onC
 
           {/* Cliente */}
           <div>
-            <SectionLabel label="Cliente" color="#8B5CF6" />
+            <div className="flex items-center gap-3"><p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#8B5CF6" }}>Cliente</p><div className="flex-1 h-px" style={{ background: "var(--border)" }} /></div>
             <div className="mt-3 p-4 rounded-xl" style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
               <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
                 {order.customer?.name || 'Cliente não informado'}
@@ -573,7 +483,7 @@ function OrderDetailsModal({ order, onClose, onStatusChange }: { order: any; onC
           {/* Entrega */}
           {order.type === 'delivery' && order.delivery_address && (
             <div>
-              <SectionLabel label="Entrega" color="#10B981" />
+              <div className="flex items-center gap-3"><p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#10B981" }}>Entrega</p><div className="flex-1 h-px" style={{ background: "var(--border)" }} /></div>
               <div className="mt-3 p-4 rounded-xl" style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
                 <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                   <MapPin size={12} className="inline mr-1" />{order.delivery_address} - {order.zone?.neighborhood || 'Bairro'}
@@ -594,7 +504,7 @@ function OrderDetailsModal({ order, onClose, onStatusChange }: { order: any; onC
 
           {/* Itens */}
           <div>
-            <SectionLabel label="Itens do Pedido" color="#F59E0B" />
+            <div className="flex items-center gap-3"><p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#F59E0B" }}>Itens do Pedido</p><div className="flex-1 h-px" style={{ background: "var(--border)" }} /></div>
             <div className="mt-3 space-y-2">
               {loadingItems ? (
                 <div className="text-center py-4">
@@ -639,7 +549,7 @@ function OrderDetailsModal({ order, onClose, onStatusChange }: { order: any; onC
 
           {/* Pagamento */}
           <div>
-            <SectionLabel label="Pagamento" color="#10B981" />
+            <div className="flex items-center gap-3"><p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#10B981" }}>Pagamento</p><div className="flex-1 h-px" style={{ background: "var(--border)" }} /></div>
             <div className="mt-3 p-3 rounded-xl inline-flex items-center gap-2"
               style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
               <DollarSign size={14} style={{ color: '#10B981' }} />
@@ -652,15 +562,15 @@ function OrderDetailsModal({ order, onClose, onStatusChange }: { order: any; onC
           {/* Observações */}
           {order.notes && (
             <div>
-              <SectionLabel label="Observações" color="#6B7280" />
+              <div className="flex items-center gap-3"><p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#6B7280" }}>Observações</p><div className="flex-1 h-px" style={{ background: "var(--border)" }} /></div>
               <div className="mt-3 p-4 rounded-xl" style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
                 <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{order.notes}</p>
               </div>
             </div>
           )}
         </div>
-      </Shell>
-    </Backdrop>
+      </ModalShell>
+    </ModalBackdrop>
   );
 }
 
@@ -738,18 +648,15 @@ export function OrdersView() {
     <div className="space-y-5">
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Pedidos</h1>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Gerencie todos os pedidos da loja</p>
-        </div>
-        <button onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 hover:shadow-lg"
-          style={{ background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', boxShadow: '0 4px 14px rgba(99,102,241,0.3)' }}>
-          <ShoppingCart size={15} />
-          Novo Pedido
-        </button>
-      </div>
+      <PageHeader
+        title="Pedidos"
+        subtitle="Gerencie todos os pedidos da loja"
+        action={
+          <Button onClick={() => setShowModal(true)} icon={<ShoppingCart size={15} />}>
+            Novo Pedido
+          </Button>
+        }
+      />
 
       {/* Stats strip */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -759,8 +666,7 @@ export function OrdersView() {
           { label: 'Em entrega', value: stats.delivering, color: '#6366F1', icon: Truck },
           { label: 'Entregues', value: stats.done, color: '#10B981', icon: CheckCircle2 },
         ].map(({ label, value, color, icon: Icon }) => (
-          <div key={label} className="rounded-2xl px-4 py-3 flex items-center gap-3"
-            style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--surface-box)' }}>
+          <Card key={label} className="px-4 py-3 flex items-center gap-3">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
               style={{ background: `${color}15` }}>
               <Icon size={15} style={{ color }} />
@@ -769,13 +675,12 @@ export function OrdersView() {
               <p className="text-lg font-bold leading-none" style={{ color: 'var(--text-primary)' }}>{value}</p>
               <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>{label}</p>
             </div>
-          </div>
+          </Card>
         ))}
       </div>
 
       {/* Filters bar */}
-      <div className="rounded-2xl p-4 flex flex-col sm:flex-row gap-3"
-        style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--surface-box)' }}>
+      <Card className="p-4 flex flex-col sm:flex-row gap-3">
         {/* Search */}
         <div className="relative flex-1">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
@@ -805,11 +710,10 @@ export function OrdersView() {
             );
           })}
         </div>
-      </div>
+      </Card>
 
       {/* Table */}
-      <div className="rounded-2xl overflow-hidden"
-        style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--surface-box)' }}>
+      <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -892,7 +796,7 @@ export function OrdersView() {
             <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Nenhum pedido encontrado</p>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Modal Criar */}
       {showModal && store && (
@@ -917,8 +821,8 @@ export function OrdersView() {
 
       {/* Modal Deletar */}
       {showDeleteModal && selectedOrder && (
-        <Backdrop onClose={() => { setShowDeleteModal(false); setSelectedOrder(null); }}>
-          <Shell maxW="max-w-sm">
+        <ModalBackdrop onClose={() => { setShowDeleteModal(false); setSelectedOrder(null); }}>
+          <ModalShell maxW="max-w-sm">
             <div className="p-7 flex flex-col items-center text-center gap-4">
               <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: isDark ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.07)' }}>
                 <AlertTriangle size={26} style={{ color: '#EF4444' }} />
@@ -954,8 +858,8 @@ export function OrdersView() {
                 </button>
               </div>
             </div>
-          </Shell>
-        </Backdrop>
+          </ModalShell>
+        </ModalBackdrop>
       )}
     </div>
   );

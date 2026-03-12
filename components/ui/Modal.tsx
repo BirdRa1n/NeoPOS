@@ -1,10 +1,7 @@
 import { X } from 'lucide-react';
 import { ReactNode } from 'react';
 
-function useIsDark() {
-  if (typeof window === 'undefined') return true;
-  return (getComputedStyle(document.documentElement).getPropertyValue('--bg') || '').trim().startsWith('#08');
-}
+
 
 interface ModalBackdropProps {
   onClose: () => void;
@@ -29,14 +26,12 @@ interface ModalShellProps {
 }
 
 export function ModalShell({ children, maxW = 'max-w-lg' }: ModalShellProps) {
-  const isDark = useIsDark();
   return (
     <div
-      className={`w-full ${maxW} max-h-[92vh] flex flex-col rounded-2xl overflow-hidden`}
+      className={`w-full ${maxW} max-h-[92vh] flex flex-col rounded-2xl overflow-hidden shadow-[var(--surface-box)]`}
       style={{
-        background: isDark ? '#0F1117' : '#FFFFFF',
-        border: '1px solid var(--border)',
-        boxShadow: isDark ? '0 24px 64px rgba(0,0,0,0.7)' : '0 24px 64px rgba(0,0,0,0.14)',
+        background: 'var(--bg)',
+        border: '1px solid var(--border)'
       }}
     >
       {children}
@@ -53,7 +48,6 @@ interface ModalHeaderProps {
 }
 
 export function ModalHeader({ title, subtitle, icon: Icon, iconColor = '#6366F1', onClose }: ModalHeaderProps) {
-  const isDark = useIsDark();
   return (
     <div className="flex items-center justify-between px-6 py-4 shrink-0 border-b border-[var(--border)]">
       <div className="flex items-center gap-3">
@@ -87,11 +81,9 @@ interface ModalFooterProps {
 }
 
 export function ModalFooter({ onCancel, onSubmit, saving, saveLabel = 'Salvar', cancelLabel = 'Cancelar' }: ModalFooterProps) {
-  const isDark = useIsDark();
   return (
     <div
-      className="flex items-center justify-end gap-2 px-6 py-4 shrink-0 border-t border-[var(--border)]"
-      style={{ background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}
+      className="flex items-center justify-end gap-2 px-6 py-4 shrink-0 border-t border-[var(--border)] bg-[var(--surface-hover)]"
     >
       <button
         type="button"

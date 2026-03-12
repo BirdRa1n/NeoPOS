@@ -291,8 +291,8 @@ export function ProductsView() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}
           onClick={e => e.target === e.currentTarget && setDeleteModal(false)}>
-          <div className="w-full max-w-sm rounded-2xl overflow-hidden"
-            style={{ background: isDark ? '#0F1117' : '#FFFFFF', border: '1px solid var(--border)', boxShadow: isDark ? '0 24px 64px rgba(0,0,0,0.7)' : '0 24px 64px rgba(0,0,0,0.14)' }}>
+          <div className="w-full max-w-sm rounded-2xl overflow-hidden shadow-[var(--surface-box)]"
+            style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
             <div className="p-7 flex flex-col items-center text-center gap-4">
               <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
                 style={{ background: isDark ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.07)' }}>

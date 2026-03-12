@@ -2,6 +2,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { useStore } from '@/contexts/StoreContext';
 import { supabase } from '@/supabase/client';
+
+import { Card } from '@/components/ui/Card';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
+import { Textarea } from '@/components/forms/Textarea';
+import { FormField } from '@/components/forms/FormField';
+import { PageHeader } from '@/components/layout/PageHeader';
+
 import {
   Store, Globe, Phone, MapPin, Image as ImageIcon, Palette,
   Save, Upload, CheckCircle2, Loader2, AlertTriangle,
@@ -33,47 +41,7 @@ const COLOR_PRESETS = [
 ];
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
-function Field({ label, required, children, hint }: {
-  label: string; required?: boolean; children: React.ReactNode; hint?: string;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <label className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider"
-        style={{ color: 'var(--text-muted)' }}>
-        {label}{required && <span style={{ color: '#EF4444' }}>*</span>}
-      </label>
-      {children}
-      {hint && <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{hint}</p>}
-    </div>
-  );
-}
 
-function Input({ icon: Icon, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { icon?: React.FC<any> }) {
-  return (
-    <div className="relative">
-      {Icon && <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><Icon size={13} style={{ color: 'var(--text-muted)' }} /></div>}
-      <input {...props}
-        className="w-full rounded-xl text-sm outline-none transition-all"
-        style={{
-          paddingLeft: Icon ? '2.25rem' : '0.875rem', paddingRight: '0.875rem',
-          paddingTop: '0.625rem', paddingBottom: '0.625rem',
-          background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)',
-        }}
-        onFocus={e => (e.currentTarget.style.borderColor = '#6366F1')}
-        onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')} />
-    </div>
-  );
-}
-
-function Textarea({ ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return (
-    <textarea {...props}
-      className="w-full rounded-xl text-sm outline-none transition-all resize-none"
-      style={{ padding: '0.625rem 0.875rem', background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)', minHeight: 80 }}
-      onFocus={e => (e.currentTarget.style.borderColor = '#6366F1')}
-      onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')} />
-  );
-}
 
 function SectionHeader({ icon: Icon, label, color = '#6366F1', subtitle }: {
   icon: React.FC<any>; label: string; color?: string; subtitle?: string;
@@ -92,14 +60,6 @@ function SectionHeader({ icon: Icon, label, color = '#6366F1', subtitle }: {
   );
 }
 
-function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div className={`rounded-2xl p-6 ${className}`}
-      style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--surface-box)' }}>
-      {children}
-    </div>
-  );
-}
 
 function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -142,7 +102,7 @@ function ImageUpload({ label, hint, currentUrl, bucket, path, height = 120, onUp
   };
 
   return (
-    <Field label={label} hint={hint}>
+    <FormField label={label} hint={hint}>
       <div onClick={() => !uploading && fileRef.current?.click()}
         className="relative overflow-hidden cursor-pointer transition-all group"
         style={{
@@ -178,7 +138,7 @@ function ImageUpload({ label, hint, currentUrl, bucket, path, height = 120, onUp
         )}
       </div>
       <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} className="hidden" />
-    </Field>
+    </FormField>
   );
 }
 
@@ -534,26 +494,27 @@ export function StoreSettingsView() {
     <div className="space-y-5">
 
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Configurações</h1>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Gerencie informações e aparência da loja</p>
-        </div>
-        <button
-          onClick={activeTab === 'whatsapp' ? handleSaveWhatsapp
-            : activeTab === 'appearance' ? handleSaveTheme
-              : handleSaveInfo}
-          disabled={saving}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-60 hover:opacity-90"
-          style={{
-            background: saveOk ? 'linear-gradient(135deg,#10B981,#059669)' : 'linear-gradient(135deg,#6366F1,#8B5CF6)',
-            boxShadow: '0 4px 14px rgba(99,102,241,0.3)',
-          }}>
-          {saving ? <><Loader2 size={14} className="animate-spin" />Salvando...</>
-            : saveOk ? <><CheckCircle2 size={14} />Salvo!</>
-              : <><Save size={14} />Salvar Alterações</>}
-        </button>
-      </div>
+      <PageHeader
+        title="Configurações"
+        subtitle="Gerencie informações e aparência da loja"
+        action={
+          <Button
+            onClick={activeTab === 'whatsapp' ? handleSaveWhatsapp
+              : activeTab === 'appearance' ? handleSaveTheme
+                : handleSaveInfo}
+            disabled={saving}
+            icon={saving ? <Loader2 size={14} className="animate-spin" /> : saveOk ? <CheckCircle2 size={14} /> : <Save size={14} />}
+            style={{
+              background: saveOk ? 'linear-gradient(135deg,#10B981,#059669)' : 'linear-gradient(135deg,#6366F1,#8B5CF6)',
+              boxShadow: '0 4px 14px rgba(99,102,241,0.3)',
+              color: 'white',
+              border: 'none',
+            }}
+          >
+            {saving ? 'Salvando...' : saveOk ? 'Salvo!' : 'Salvar Alterações'}
+          </Button>
+        }
+      />
 
       {/* Tabs */}
       <div className="flex gap-1 p-1 rounded-xl w-fit" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
@@ -573,13 +534,13 @@ export function StoreSettingsView() {
       {activeTab === 'info' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2 space-y-5">
-            <Card>
+            <Card className="p-6">
               <SectionHeader icon={Store} label="Dados da Loja" subtitle="Informações principais do negócio" />
               <div className="space-y-4">
-                <Field label="Nome da Loja" required>
+                <FormField label="Nome da Loja" required>
                   <Input icon={Store} value={info.name} onChange={si('name')} placeholder="Ex: Pizzaria do João" />
-                </Field>
-                <Field label="Apelido (nickname)" hint="Usado na URL do catálogo — apenas letras, números e hifens" required>
+                </FormField>
+                <FormField label="Apelido (nickname)" hint="Usado na URL do catálogo — apenas letras, números e hifens" required>
                   <div className="relative">
                     <Hash size={13} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-muted)' }} />
                     <input value={info.nickname}
@@ -597,52 +558,52 @@ export function StoreSettingsView() {
                       <span className="font-mono truncate" style={{ color: '#818CF8' }}>/{info.nickname}/catalogo</span>
                     </div>
                   )}
-                </Field>
-                <Field label="Descrição">
+                </FormField>
+                <FormField label="Descrição">
                   <Textarea value={info.description} onChange={si('description')} placeholder="Descreva sua loja para os clientes..." rows={3} />
-                </Field>
+                </FormField>
               </div>
             </Card>
 
-            <Card>
+            <Card className="p-6">
               <SectionHeader icon={Phone} label="Contato" subtitle="Formas de entrar em contato" />
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Telefone / WhatsApp">
+                <FormField label="Telefone / WhatsApp">
                   <Input icon={Phone} value={info.phone} onChange={si('phone')} placeholder="(00) 00000-0000" />
-                </Field>
-                <Field label="E-mail">
+                </FormField>
+                <FormField label="E-mail">
                   <Input icon={Mail} value={info.email} onChange={si('email')} type="email" placeholder="contato@loja.com" />
-                </Field>
+                </FormField>
               </div>
             </Card>
 
-            <Card>
+            <Card className="p-6">
               <SectionHeader icon={MapPin} label="Endereço" subtitle="Localização da loja" color="#10B981" />
               <div className="space-y-4">
-                <Field label="Endereço">
+                <FormField label="Endereço">
                   <Input icon={MapPin} value={info.address} onChange={si('address')} placeholder="Rua das Flores, 123" />
-                </Field>
+                </FormField>
                 <div className="grid grid-cols-5 gap-3">
-                  <div className="col-span-2"><Field label="Cidade"><Input value={info.city} onChange={si('city')} placeholder="Fortaleza" /></Field></div>
-                  <Field label="UF"><Input value={info.state} onChange={si('state')} placeholder="CE" maxLength={2} /></Field>
-                  <div className="col-span-2"><Field label="CEP"><Input value={info.zip_code} onChange={si('zip_code')} placeholder="60000-000" /></Field></div>
+                  <div className="col-span-2"><FormField label="Cidade"><Input value={info.city} onChange={si('city')} placeholder="Fortaleza" /></FormField></div>
+                  <FormField label="UF"><Input value={info.state} onChange={si('state')} placeholder="CE" maxLength={2} /></FormField>
+                  <div className="col-span-2"><FormField label="CEP"><Input value={info.zip_code} onChange={si('zip_code')} placeholder="60000-000" /></FormField></div>
                 </div>
               </div>
             </Card>
           </div>
 
           <div className="space-y-5">
-            <Card>
+            <Card className="p-6">
               <SectionHeader icon={ImageIcon} label="Logo" subtitle="Imagem da marca" color="#8B5CF6" />
               <div className="flex justify-center">
                 <ImageUpload label="Logo da Loja" hint="Quadrado, PNG ou JPG — 200×200px" currentUrl={info.logo_url} bucket="store-images" path={`stores/${store.id}/logo`} height={120} rounded onUploaded={url => setInfo(f => ({ ...f, logo_url: url }))} />
               </div>
             </Card>
-            <Card>
+            <Card className="p-6">
               <SectionHeader icon={ImageIcon} label="Capa" subtitle="Imagem de fundo do catálogo" color="#F59E0B" />
               <ImageUpload label="Imagem de Capa" hint="Formato paisagem — 1200×400px" currentUrl={info.cover_url} bucket="store-images" path={`stores/${store.id}/cover`} height={100} onUploaded={url => setInfo(f => ({ ...f, cover_url: url }))} />
             </Card>
-            <Card>
+            <Card className="p-6">
               <SectionHeader icon={Zap} label="Status" subtitle="Status atual da loja" color="#10B981" />
               <button type="button" onClick={() => setInfo(f => ({ ...f, is_open: !f.is_open }))}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
@@ -666,7 +627,7 @@ export function StoreSettingsView() {
       {activeTab === 'appearance' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           <div className="lg:col-span-2 space-y-5">
-            <Card>
+            <Card className="p-6">
               <SectionHeader icon={Palette} label="Paleta de Cores" subtitle="Escolha uma combinação pronta ou personalize" color="#EC4899" />
               <div className="grid grid-cols-4 gap-2 mb-5">
                 {COLOR_PRESETS.map(preset => (
@@ -685,7 +646,7 @@ export function StoreSettingsView() {
               </div>
               <div className="grid grid-cols-3 gap-4">
                 {[{ key: 'primary_color', label: 'Cor Primária' }, { key: 'secondary_color', label: 'Cor Secundária' }, { key: 'accent_color', label: 'Cor de Destaque' }].map(({ key, label }) => (
-                  <Field key={key} label={label}>
+                  <FormField key={key} label={label}>
                     <div className="flex items-center gap-2">
                       <div className="relative w-10 h-9 rounded-lg overflow-hidden cursor-pointer shrink-0" style={{ border: '2px solid var(--input-border)' }}>
                         <input type="color" value={(theme as any)[key]} onChange={e => st(key as keyof typeof theme)(e.target.value)} className="absolute inset-0 w-full h-full cursor-pointer opacity-0" />
@@ -697,22 +658,22 @@ export function StoreSettingsView() {
                         onFocus={e => (e.currentTarget.style.borderColor = '#6366F1')}
                         onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')} />
                     </div>
-                  </Field>
+                  </FormField>
                 ))}
               </div>
             </Card>
 
-            <Card>
+            <Card className="p-6">
               <SectionHeader icon={FileText} label="Tipografia & Layout" color="#6366F1" />
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Fonte">
+                <FormField label="Fonte">
                   <select value={theme.font_family} onChange={e => st('font_family')(e.target.value)}
                     className="w-full rounded-xl text-sm outline-none transition-all"
                     style={{ padding: '0.625rem 0.875rem', background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}>
                     {['Inter', 'Poppins', 'Nunito', 'Raleway', 'DM Sans', 'Roboto', 'Lato', 'Open Sans'].map(f => <option key={f} value={f}>{f}</option>)}
                   </select>
-                </Field>
-                <Field label="Bordas">
+                </FormField>
+                <FormField label="Bordas">
                   <div className="flex gap-2">
                     {[{ value: 'sharp', label: 'Reto' }, { value: 'rounded', label: 'Arredondado' }, { value: 'pill', label: 'Oval' }].map(({ value, label }) => (
                       <button key={value} type="button" onClick={() => st('border_radius')(value)}
@@ -722,10 +683,10 @@ export function StoreSettingsView() {
                       </button>
                     ))}
                   </div>
-                </Field>
+                </FormField>
               </div>
               <div className="grid grid-cols-2 gap-4 mt-4">
-                <Field label="Estilo dos Cards">
+                <FormField label="Estilo dos Cards">
                   <div className="flex gap-2">
                     {[{ value: 'shadow', label: 'Sombra', icon: Layers }, { value: 'bordered', label: 'Borda', icon: Sun }, { value: 'flat', label: 'Flat', icon: Droplets }].map(({ value, label, icon: Icon }) => (
                       <button key={value} type="button" onClick={() => st('card_style')(value)}
@@ -735,8 +696,8 @@ export function StoreSettingsView() {
                       </button>
                     ))}
                   </div>
-                </Field>
-                <Field label="Estilo do Header">
+                </FormField>
+                <FormField label="Estilo do Header">
                   <div className="flex gap-2">
                     {[{ value: 'cover', label: 'Capa' }, { value: 'solid', label: 'Sólido' }, { value: 'minimal', label: 'Minimal' }].map(({ value, label }) => (
                       <button key={value} type="button" onClick={() => st('header_style')(value)}
@@ -746,18 +707,18 @@ export function StoreSettingsView() {
                       </button>
                     ))}
                   </div>
-                </Field>
+                </FormField>
               </div>
             </Card>
           </div>
 
           <div className="space-y-4">
-            <Card>
+            <Card className="p-6">
               <SectionHeader icon={Monitor} label="Preview" subtitle="Como ficará o catálogo" color="#6366F1" />
               <CatalogPreview store={{ ...store, ...info }} theme={theme} />
               <p className="text-[10px] font-bold uppercase tracking-widest mt-3 text-center" style={{ color: 'var(--text-muted)' }}>Visualização em tempo real</p>
             </Card>
-            <Card>
+            <Card className="p-6">
               <div className="space-y-3">
                 {[{ key: 'background_color', label: 'Fundo do catálogo' }, { key: 'surface_color', label: 'Fundo dos cards' }, { key: 'text_color', label: 'Cor do texto' }].map(({ key, label }) => (
                   <div key={key} className="flex items-center gap-3">
@@ -787,7 +748,7 @@ export function StoreSettingsView() {
       {/* ── TAB: CATALOG ── */}
       {activeTab === 'catalog' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <Card>
+          <Card className="p-6">
             <SectionHeader icon={Globe} label="Link do Catálogo" subtitle="URL pública para seus clientes" color="#10B981" />
             {info.nickname ? (
               <div className="space-y-4">
@@ -818,7 +779,7 @@ export function StoreSettingsView() {
             )}
           </Card>
 
-          <Card>
+          <Card className="p-6">
             <SectionHeader icon={ImageIcon} label="Imagens do Catálogo" subtitle="Logo e capa que aparecem para seus clientes" color="#8B5CF6" />
             <div className="grid grid-cols-2 gap-4 items-start">
               <div className="flex flex-col items-center gap-2">
@@ -838,7 +799,7 @@ export function StoreSettingsView() {
           <div className="space-y-5">
 
             {/* Seletor de modo: Plataforma vs Próprio */}
-            <Card>
+            <Card className="p-6">
               <SectionHeader icon={Server} label="Servidor Evolution API" subtitle="Escolha como conectar sua instância" color="#6366F1" />
 
               <div className="grid grid-cols-2 gap-3 mb-5">
@@ -922,7 +883,7 @@ export function StoreSettingsView() {
               {/* Campos: Servidor Próprio */}
               {useOwnServer && (
                 <div className="space-y-4">
-                  <Field label="API Key" required>
+                  <FormField label="API Key" required>
                     <div className="relative">
                       <Eye size={13} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-muted)' }} />
                       <input type="password" value={whatsapp.api_key}
@@ -938,15 +899,15 @@ export function StoreSettingsView() {
                         <CheckCircle2 size={11} /> API Key configurada — deixe vazio para manter
                       </p>
                     )}
-                  </Field>
+                  </FormField>
 
-                  <Field label="Nome da Instância" required hint="Identificador único no seu servidor Evolution">
+                  <FormField label="Nome da Instância" required hint="Identificador único no seu servidor Evolution">
                     <Input icon={Hash} value={whatsapp.instance_name}
                       onChange={e => setWhatsapp(f => ({ ...f, instance_name: e.target.value }))}
                       placeholder="minha-loja" />
-                  </Field>
+                  </FormField>
 
-                  <Field label="URL do Servidor Evolution" required hint="Ex: https://meu-servidor.com">
+                  <FormField label="URL do Servidor Evolution" required hint="Ex: https://meu-servidor.com">
                     <Input icon={Globe}
                       value={whatsapp.evolution_url}
                       onChange={e => setWhatsapp(f => ({ ...f, evolution_url: e.target.value }))}
@@ -957,13 +918,13 @@ export function StoreSettingsView() {
                         Deixe vazio para manter o servidor atual
                       </p>
                     )}
-                  </Field>
+                  </FormField>
                 </div>
               )}
             </Card>
 
             {/* Notificações */}
-            <Card>
+            <Card className="p-6">
               <SectionHeader icon={CheckCircle2} label="Notificações Automáticas" subtitle="Escolha quais eventos enviam mensagem" color="#6366F1" />
               <div className="space-y-3">
                 {[
@@ -996,7 +957,7 @@ export function StoreSettingsView() {
 
           {/* ── Coluna Direita: Status + Info ── */}
           <div className="space-y-5">
-            <Card>
+            <Card className="p-6">
               <SectionHeader icon={Power} label="Status da Conexão" subtitle="Gerencie a conexão do WhatsApp" color="#25D366" />
 
               {/* Desconectado */}
@@ -1099,7 +1060,7 @@ export function StoreSettingsView() {
             </Card>
 
             {/* Como Funciona */}
-            <Card>
+            <Card className="p-6">
               <SectionHeader icon={FileText} label="Como Funciona" subtitle="Mensagens automáticas por status" color="#6366F1" />
               <div className="space-y-3 text-xs" style={{ color: 'var(--text-muted)' }}>
                 {[

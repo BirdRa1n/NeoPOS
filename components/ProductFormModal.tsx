@@ -428,13 +428,10 @@ export function ProductFormModal({ isOpen, onClose, product, onSuccess }: Produc
       >
         {/* Dialog */}
         <div
-          className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl overflow-hidden"
+          className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl overflow-hidden shadow-[var(--surface-box)]"
           style={{
-            background: isDark ? '#0F1117' : '#FFFFFF',
+            background: 'var(--bg)',
             border: '1px solid var(--border)',
-            boxShadow: isDark
-              ? '0 25px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.04)'
-              : '0 25px 60px rgba(0,0,0,0.15)',
           }}
         >
           {/* Header */}
@@ -713,8 +710,8 @@ export function ProductFormModal({ isOpen, onClose, product, onSuccess }: Produc
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between gap-3 px-6 py-4 shrink-0"
-            style={{ borderTop: '1px solid var(--border)', background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}>
+          <div className="flex items-center justify-between gap-3 px-6 py-4 shrink-0 bg-[var(--surface-hover)]"
+            style={{ borderTop: '1px solid var(--border)' }}>
             <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
               {isEdit ? 'Alterações são salvas imediatamente' : 'Campos com * são obrigatórios'}
             </p>
@@ -757,11 +754,10 @@ export function ProductFormModal({ isOpen, onClose, product, onSuccess }: Produc
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4"
           style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
           onClick={e => e.target === e.currentTarget && setShowCategoryModal(false)}>
-          <div className="w-full max-w-md rounded-2xl overflow-hidden"
+          <div className="w-full max-w-md rounded-2xl overflow-hidden shadow-[var(--surface-box)]"
             style={{
-              background: isDark ? '#0F1117' : '#FFFFFF',
+              background: 'var(--bg)',
               border: '1px solid var(--border)',
-              boxShadow: isDark ? '0 25px 60px rgba(0,0,0,0.8)' : '0 25px 60px rgba(0,0,0,0.2)',
             }}>
             <div className="p-6">
               <div className="flex items-center gap-3 mb-5">
