@@ -23,6 +23,7 @@ export interface Store {
   longitude?: number;
   created_at: string;
   updated_at: string;
+  is_open: boolean;
 }
 
 export interface Customer {
@@ -155,6 +156,9 @@ export interface Order {
   delivery_longitude?: number;
   created_at: string;
   updated_at: string;
+  zone?: DeliveryZone;
+  driver?: DeliveryDriver;
+  customer?: Customer;
 }
 
 export interface OrderItem {

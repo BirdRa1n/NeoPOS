@@ -1,10 +1,10 @@
 "use client";
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Modal, Button } from '@heroui/react';
 import {
-  X, Upload, ImagePlus, Trash2, GripVertical,
+  X, Upload, ImagePlus, Trash2, GripVertical, Plus,
   Package, DollarSign, FileText, Tag, Star,
-  AlertCircle, CheckCircle2, Loader2, ArrowLeft, ArrowRight
+  AlertCircle, CheckCircle2, Loader2, ArrowLeft, ArrowRight, FolderTree
 } from 'lucide-react';
 import { supabase } from '@/supabase/client';
 import { useStore } from '@/contexts/StoreContext';
@@ -190,6 +190,47 @@ export function ProductFormModal({ isOpen, onClose, product, onSuccess }: Produc
   const { store } = useStore();
   const [loading, setLoading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [creatingCategory, setCreatingCategory] = useState(false);
+
+  useEffect(() => {
+    if (!store?.id) return;
+    loadCategories();
+  }, [store?.id]);
+
+  const loadCategories = async () => {
+    if (!store?.id) return;
+    const { data } = await supabase.schema('catalog').from('categories')
+      .select('id,name')
+      .eq('store_id', store.id)
+      .eq('active', true)
+      .order('sort_order');
+    setCategories(data || []);
+  };
+
+  const handleCreateCategory = async () => {
+    if (!store?.id || !newCategoryName.trim()) return;
+    setCreatingCategory(true);
+    try {
+      const { error } = await supabase.schema('catalog').from('categories').insert({
+        store_id: store.id,
+        name: newCategoryName.trim(),
+        sort_order: categories.length,
+        active: true,
+      });
+      if (error) throw error;
+      toast.success('Categoria criada!');
+      await loadCategories();
+      setNewCategoryName('');
+      setShowCategoryModal(false);
+    } catch (err: any) {
+      toast.error(err.message ?? 'Erro ao criar categoria');
+    } finally {
+      setCreatingCategory(false);
+    }
+  };
 
   // Existing images (edit mode)
   const [existingImages, setExistingImages] = useState<ExistingImage[]>(() =>
@@ -296,8 +337,10 @@ export function ProductFormModal({ isOpen, onClose, product, onSuccess }: Produc
     try {
       const formData = new FormData(e.currentTarget);
 
+      const categoryId = formData.get('category_id') as string;
       const productData = {
         store_id: store.id,
+        category_id: categoryId || null,
         name: formData.get('name') as string,
         description: formData.get('description') as string,
         price: parseFloat(formData.get('price') as string),
@@ -430,6 +473,54 @@ export function ProductFormModal({ isOpen, onClose, product, onSuccess }: Produc
                   <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#6366F1' }}>
                     Informações Básicas
                   </p>
+
+                  <Field label="Categoria">
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                          <FolderTree size={14} style={{ color: 'var(--text-muted)' }} />
+                        </div>
+                        <select
+                          name="category_id"
+                          defaultValue={product?.category_id || ''}
+                          className="w-full rounded-xl text-sm outline-none transition-all appearance-none"
+                          style={{
+                            paddingLeft: '2.25rem',
+                            paddingRight: '2.5rem',
+                            paddingTop: '0.625rem',
+                            paddingBottom: '0.625rem',
+                            background: 'var(--input-bg)',
+                            border: '1px solid var(--input-border)',
+                            color: 'var(--text-primary)',
+                          }}
+                          onFocus={e => (e.currentTarget.style.borderColor = '#6366F1')}
+                          onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')}>
+                          <option value="">Sem categoria</option>
+                          {categories.map(cat => (
+                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                          ))}
+                        </select>
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                            <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-muted)' }} />
+                          </svg>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowCategoryModal(true)}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all shrink-0"
+                        style={{
+                          background: isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.08)',
+                          color: '#818CF8',
+                          border: '1px solid rgba(99,102,241,0.2)',
+                        }}
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.15)'}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.08)'}>
+                        <Plus size={13} /> Nova
+                      </button>
+                    </div>
+                  </Field>
 
                   <Field label="Nome do Produto" required>
                     <StyledInput
@@ -660,6 +751,69 @@ export function ProductFormModal({ isOpen, onClose, product, onSuccess }: Produc
           </div>
         </div>
       </div>
+
+      {/* Category Creation Modal */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
+          onClick={e => e.target === e.currentTarget && setShowCategoryModal(false)}>
+          <div className="w-full max-w-md rounded-2xl overflow-hidden"
+            style={{
+              background: isDark ? '#0F1117' : '#FFFFFF',
+              border: '1px solid var(--border)',
+              boxShadow: isDark ? '0 25px 60px rgba(0,0,0,0.8)' : '0 25px 60px rgba(0,0,0,0.2)',
+            }}>
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  style={{ background: 'linear-gradient(135deg,#6366F1,#8B5CF6)' }}>
+                  <FolderTree size={18} color="#fff" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Nova Categoria</h3>
+                  <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Organize seus produtos</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <Field label="Nome da Categoria" required>
+                  <StyledInput
+                    value={newCategoryName}
+                    onChange={e => setNewCategoryName(e.target.value)}
+                    placeholder="Ex: Pizzas, Bebidas, Sobremesas..."
+                    autoFocus
+                    onKeyDown={e => e.key === 'Enter' && handleCreateCategory()}
+                  />
+                </Field>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => { setShowCategoryModal(false); setNewCategoryName(''); }}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                    style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--surface-hover)'}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'var(--input-bg)'}>
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCreateCategory}
+                    disabled={!newCategoryName.trim() || creatingCategory}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
+                    style={{ background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', boxShadow: '0 4px 14px rgba(99,102,241,0.35)' }}>
+                    {creatingCategory ? (
+                      <><Loader2 size={14} className="animate-spin" /> Criando...</>
+                    ) : (
+                      <><CheckCircle2 size={14} /> Criar Categoria</>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

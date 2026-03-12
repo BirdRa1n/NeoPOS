@@ -576,8 +576,13 @@ function OrderDetailsModal({ order, onClose, onStatusChange }: { order: any; onC
               <SectionLabel label="Entrega" color="#10B981" />
               <div className="mt-3 p-4 rounded-xl" style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
                 <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                  <MapPin size={12} className="inline mr-1" />{order.delivery_address}
+                  <MapPin size={12} className="inline mr-1" />{order.delivery_address} - {order.zone?.neighborhood || 'Bairro'}
                 </p>
+                {order?.delivery_complement && (
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                    Complemento: {order.delivery_complement}
+                  </p>
+                )}
                 {order.delivery_fee > 0 && (
                   <p className="text-xs mt-2 font-semibold" style={{ color: '#10B981' }}>
                     Taxa: {formatCurrency(order.delivery_fee)}
@@ -611,6 +616,8 @@ function OrderDetailsModal({ order, onClose, onStatusChange }: { order: any; onC
               ))}
             </div>
           </div>
+
+
 
           {/* Total */}
           <div className="rounded-xl p-4" style={{ background: isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.2)' }}>

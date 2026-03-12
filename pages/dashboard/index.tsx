@@ -304,6 +304,7 @@ function DashboardHome() {
   const { summary, loading: l3 } = useTodaySummary();
   const { products, loading: l4 } = useProducts();
   const { customers, loading: l5 } = useCustomers();
+  const { store } = useStore();
 
   const loading = l1 || l2 || l3 || l4 || l5;
 
@@ -338,12 +339,17 @@ function DashboardHome() {
         </div>
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold"
           style={{
-            background: isDark ? 'rgba(16,185,129,0.12)' : 'rgba(16,185,129,0.08)',
-            color: isDark ? '#34D399' : '#047857',
+            background: isDark ? store?.is_open ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)' : store?.is_open ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)',
+            color: isDark ? store?.is_open ? '#34D399' : '#F87171' : store?.is_open ? '#10B981' : '#EF4444',
             border: '1px solid rgba(16,185,129,0.2)',
           }}>
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          Loja aberta
+          {
+            store?.is_open ? (
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            ) :
+              (<span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />)
+          }
+          {store?.is_open ? 'Loja Aberta' : 'Loja Fechada'}
         </div>
       </div>
 
