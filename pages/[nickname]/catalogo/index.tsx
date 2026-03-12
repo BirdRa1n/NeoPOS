@@ -2,12 +2,11 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import {
-  ShoppingCart, Search, MapPin, Phone, ArrowLeft,
-  Minus, Plus, X, CheckCircle, ChevronRight, Clock,
+  Search, MapPin, Phone, ArrowLeft,
+  Minus, Plus, CheckCircle, ChevronRight, Clock,
   Bike, Store, CreditCard, Banknote, Smartphone, Wallet,
-  Star, Package
+  Package
 } from 'lucide-react';
-import { supabase } from '@/supabase/client';
 
 /* ─── Types ──────────────────────────────────────────── */
 interface StoreData {
@@ -218,27 +217,25 @@ export default function CatalogPage() {
     if (!nickname) return;
     (async () => {
       setLoading(true);
-      const { data: storeData } = await supabase.schema('core').from('stores')
-        .select('id,name,nickname,description,logo_url,cover_url,phone,city,state,is_open')
-        .eq('nickname', nickname).single();
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/get-store-catalog?nickname=${encodeURIComponent(nickname)}`
+        );
 
-      if (!storeData) { setLoading(false); return; }
-      setStore(storeData);
+        if (!res.ok) { setLoading(false); return; }
 
-      const [themeRes, catsRes, prodsRes, zonesRes] = await Promise.all([
-        supabase.schema('catalog').from('store_theme').select('*').eq('store_id', storeData.id).maybeSingle(),
-        supabase.schema('catalog').from('categories').select('id,name,sort_order').eq('store_id', storeData.id).eq('active', true).order('sort_order'),
-        supabase.schema('catalog').from('products')
-          .select('id,category_id,name,description,price,promotional_price,available,product_images(url,is_primary)')
-          .eq('store_id', storeData.id).eq('available', true).order('sort_order'),
-        supabase.schema('core').from('delivery_zones').select('id,neighborhood,delivery_fee').eq('store_id', storeData.id).eq('active', true),
-      ]);
+        const data = await res.json();
 
-      if (themeRes.data) setTheme({ ...DEFAULT_THEME, ...themeRes.data });
-      if (catsRes.data) setCategories(catsRes.data);
-      if (prodsRes.data) setProducts(prodsRes.data as Product[]);
-      if (zonesRes.data) setZones(zonesRes.data);
-      setLoading(false);
+        if (data.store) setStore(data.store);
+        if (data.theme) setTheme({ ...DEFAULT_THEME, ...data.theme });
+        if (data.categories) setCategories(data.categories);
+        if (data.products) setProducts(data.products);
+        if (data.zones) setZones(data.zones);
+      } catch (err) {
+        console.error('Erro ao carregar catálogo:', err);
+      } finally {
+        setLoading(false);
+      }
     })();
   }, [nickname]);
 
@@ -546,19 +543,40 @@ export default function CatalogPage() {
           {checkoutSub === 'address' && orderType === 'delivery' && (
             <div className="checkout-section">
               <p className="section-label">Endereço de entrega</p>
-              <p style={{ fontSize: 12, fontWeight: 600, color: 'rgba(0,0,0,.4)', marginBottom: 10 }}>Selecione o bairro</p>
-              {zones.map(z => (
-                <div key={z.id} className={`zone-card ${selectedZone === z.id ? 'selected' : ''}`} onClick={() => setSelectedZone(z.id)}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <MapPin size={14} color={selectedZone === z.id ? theme.primary_color : 'rgba(0,0,0,.3)'} />
-                    <span style={{ fontSize: 13, fontWeight: 600 }}>{z.neighborhood}</span>
-                  </div>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: z.delivery_fee === 0 ? '#22c55e' : theme.primary_color }}>
-                    {z.delivery_fee === 0 ? 'Grátis' : fmt(z.delivery_fee)}
-                  </span>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6, color: 'rgba(0,0,0,.5)' }}>Bairro / Região</label>
+                <div style={{ position: 'relative' }}>
+                  <MapPin size={15} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: selectedZone ? theme.primary_color : 'rgba(0,0,0,.3)' }} />
+                  <select
+                    className="input"
+                    value={selectedZone}
+                    onChange={e => setSelectedZone(e.target.value)}
+                    style={{ paddingLeft: 40, appearance: 'none', cursor: 'pointer' }}
+                  >
+                    <option value="">Selecione o bairro...</option>
+                    {zones.map(z => (
+                      <option key={z.id} value={z.id}>
+                        {z.neighborhood}{z.delivery_fee === 0 ? ' — Entrega grátis' : ` — ${fmt(z.delivery_fee)}`}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronRight size={14} style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%) rotate(90deg)', pointerEvents: 'none', color: 'rgba(0,0,0,.3)' }} />
                 </div>
-              ))}
-              <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {/* Preview da taxa após seleção */}
+                {selectedZone && (() => {
+                  const zone = zones.find(z => z.id === selectedZone);
+                  if (!zone) return null;
+                  return (
+                    <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 8, background: zone.delivery_fee === 0 ? 'rgba(34,197,94,.08)' : `color-mix(in srgb, ${theme.primary_color} 8%, transparent)`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 12, color: 'rgba(0,0,0,.5)' }}>Taxa de entrega</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: zone.delivery_fee === 0 ? '#16a34a' : theme.primary_color }}>
+                        {zone.delivery_fee === 0 ? 'Grátis 🎉' : fmt(zone.delivery_fee)}
+                      </span>
+                    </div>
+                  );
+                })()}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6, color: 'rgba(0,0,0,.5)' }}>Endereço completo</label>
                   <input className="input" placeholder="Rua, número" value={address} onChange={e => setAddress(e.target.value)} />
