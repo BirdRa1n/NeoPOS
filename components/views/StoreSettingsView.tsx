@@ -7,7 +7,7 @@ import {
   Save, Upload, X, CheckCircle2, Loader2, AlertTriangle,
   Eye, EyeOff, Hash, Mail, FileText, Sparkles, RefreshCw,
   Monitor, Smartphone, ExternalLink, Copy, Check,
-  Sun, Droplets, Layers, Zap,
+  Sun, Droplets, Layers, Zap, MessageCircle, QrCode, Power,
 } from 'lucide-react';
 
 // ─── Theme hook ───────────────────────────────────────────────────────────────
@@ -262,8 +262,22 @@ export function StoreSettingsView() {
 
   const [saving, setSaving] = useState(false);
   const [saveOk, setSaveOk] = useState(false);
-  const [activeTab, setActiveTab] = useState<'info' | 'appearance' | 'catalog'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'appearance' | 'catalog' | 'whatsapp'>('info');
   const [copied, setCopied] = useState(false);
+
+  // WhatsApp
+  const [whatsapp, setWhatsapp] = useState({
+    api_key: '',
+    instance_name: '',
+    send_on_confirmed: true,
+    send_on_preparing: true,
+    send_on_out_for_delivery: true,
+    send_on_delivered: true,
+    send_on_cancelled: true,
+  });
+  const [whatsappStatus, setWhatsappStatus] = useState<'disconnected' | 'connecting' | 'connected'>('disconnected');
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [loadingWhatsapp, setLoadingWhatsapp] = useState(false);
 
   // Store info
   const [info, setInfo] = useState({
@@ -308,6 +322,22 @@ export function StoreSettingsView() {
     // Load theme
     catalog().from('store_theme').select('*').eq('store_id', store.id).maybeSingle().then(({ data }) => {
       if (data) setTheme(t => ({ ...t, ...data }));
+    });
+
+    // Load WhatsApp config
+    supabase.schema('integrations').from('whatsapp_config').select('*').eq('store_id', store.id).maybeSingle().then(({ data }) => {
+      if (data) {
+        setWhatsapp({
+          api_key: data.api_key || '',
+          instance_name: data.instance_name || '',
+          send_on_confirmed: data.send_on_confirmed ?? true,
+          send_on_preparing: data.send_on_preparing ?? true,
+          send_on_out_for_delivery: data.send_on_out_for_delivery ?? true,
+          send_on_delivered: data.send_on_delivered ?? true,
+          send_on_cancelled: data.send_on_cancelled ?? true,
+        });
+        if (data.is_connected) setWhatsappStatus('connected');
+      }
     });
   }, [store]);
 
@@ -359,6 +389,66 @@ export function StoreSettingsView() {
     setTimeout(() => setSaveOk(false), 2500);
   };
 
+  const handleSaveWhatsapp = async () => {
+    if (!store) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/functions/v1/whatsapp-config?action=save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}` },
+        body: JSON.stringify({ ...whatsapp, store_id: store.id }),
+      });
+      if (!res.ok) throw new Error('Erro ao salvar');
+      showSaveOk();
+    } catch (err: any) { alert(err.message ?? 'Erro ao salvar WhatsApp'); }
+    finally { setSaving(false); }
+  };
+
+  const handleConnectWhatsapp = async () => {
+    if (!store) return;
+    setLoadingWhatsapp(true);
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const res = await fetch('/api/functions/v1/whatsapp-config?action=connect', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Erro ao conectar');
+      setWhatsappStatus('connecting');
+      setTimeout(() => handleGetQrCode(), 2000);
+    } catch (err: any) { alert(err.message); }
+    finally { setLoadingWhatsapp(false); }
+  };
+
+  const handleGetQrCode = async () => {
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const res = await fetch('/api/functions/v1/whatsapp-config?action=qrcode', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.qrcode) setQrCode(data.qrcode.base64);
+    } catch (err: any) { console.error(err); }
+  };
+
+  const handleCheckStatus = async () => {
+    setLoadingWhatsapp(true);
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const res = await fetch('/api/functions/v1/whatsapp-config?action=status', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.connected) {
+        setWhatsappStatus('connected');
+        setQrCode(null);
+      }
+    } catch (err: any) { alert(err.message); }
+    finally { setLoadingWhatsapp(false); }
+  };
+
   const catalogUrl = info.nickname ? `${typeof window !== 'undefined' ? window.location.origin : ''}/${info.nickname}/catalogo` : '';
 
   const copyUrl = () => {
@@ -372,6 +462,7 @@ export function StoreSettingsView() {
     { id: 'info', label: 'Informações', icon: Store },
     { id: 'appearance', label: 'Aparência', icon: Palette },
     { id: 'catalog', label: 'Catálogo', icon: Globe },
+    { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
   ] as const;
 
   const si = (k: keyof typeof info) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setInfo(f => ({ ...f, [k]: e.target.value }));
@@ -395,7 +486,7 @@ export function StoreSettingsView() {
 
         {/* Save button */}
         <button
-          onClick={activeTab === 'info' || activeTab === 'catalog' ? handleSaveInfo : handleSaveTheme}
+          onClick={activeTab === 'whatsapp' ? handleSaveWhatsapp : activeTab === 'info' || activeTab === 'catalog' ? handleSaveInfo : handleSaveTheme}
           disabled={saving}
           className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-60 hover:opacity-90"
           style={{ background: saveOk ? 'linear-gradient(135deg,#10B981,#059669)' : 'linear-gradient(135deg,#6366F1,#8B5CF6)', boxShadow: '0 4px 14px rgba(99,102,241,0.3)' }}>
@@ -807,23 +898,143 @@ export function StoreSettingsView() {
                   onUploaded={url => setInfo(f => ({ ...f, cover_url: url }))}
                 />
               </div>
+            </div>
+          </Card>
+        </div>
+      )}
 
-              <div className="p-3 rounded-xl flex items-start gap-2.5"
-                style={{ background: isDark ? 'rgba(99,102,241,0.06)' : 'rgba(99,102,241,0.04)', border: '1px solid rgba(99,102,241,0.12)' }}>
-                <Sparkles size={13} className="mt-0.5 shrink-0" style={{ color: '#818CF8' }} />
-                <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                  Para melhor qualidade, use logo quadrado (200×200px) e capa no formato paisagem (1200×400px). Formatos aceitos: PNG, JPG, WEBP.
-                </p>
+      {/* ── TAB: WHATSAPP ── */}
+      {activeTab === 'whatsapp' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <div className="space-y-5">
+            <Card>
+              <SectionHeader icon={MessageCircle} label="Configuração Evolution API" subtitle="Conecte sua instância do WhatsApp" color="#25D366" />
+              <div className="space-y-4">
+                <Field label="API Key" required>
+                  <Input icon={Eye} type="password" value={whatsapp.api_key} onChange={e => setWhatsapp(f => ({ ...f, api_key: e.target.value }))} placeholder="Sua chave da Evolution API" />
+                </Field>
+                <Field label="Nome da Instância" required>
+                  <Input icon={Hash} value={whatsapp.instance_name} onChange={e => setWhatsapp(f => ({ ...f, instance_name: e.target.value }))} placeholder="minha-loja" />
+                </Field>
               </div>
-            </div>
-          </Card>
+            </Card>
 
-          <Card className="lg:col-span-2">
-            <SectionHeader icon={Smartphone} label="Preview do Catálogo" subtitle="Visualização de como seus clientes verão a loja" color="#EC4899" />
-            <div className="max-w-xs mx-auto">
-              <CatalogPreview store={{ ...store, ...info }} theme={theme} />
-            </div>
-          </Card>
+            <Card>
+              <SectionHeader icon={CheckCircle2} label="Notificações Automáticas" subtitle="Escolha quais eventos enviam mensagem" color="#6366F1" />
+              <div className="space-y-3">
+                {[
+                  { key: 'send_on_confirmed', label: 'Pedido Confirmado', desc: 'Notifica quando o pedido é confirmado' },
+                  { key: 'send_on_preparing', label: 'Em Preparo', desc: 'Notifica quando começa a preparar' },
+                  { key: 'send_on_out_for_delivery', label: 'Saiu para Entrega', desc: 'Notifica quando sai para entrega' },
+                  { key: 'send_on_delivered', label: 'Entregue', desc: 'Notifica quando é entregue' },
+                  { key: 'send_on_cancelled', label: 'Cancelado', desc: 'Notifica quando é cancelado' },
+                ].map(({ key, label, desc }) => (
+                  <button key={key} type="button"
+                    onClick={() => setWhatsapp(f => ({ ...f, [key]: !(f as any)[key] }))}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
+                    style={{
+                      background: (whatsapp as any)[key] ? (isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.07)') : 'var(--input-bg)',
+                      border: `1px solid ${(whatsapp as any)[key] ? '#6366F1' : 'var(--border)'}`,
+                    }}>
+                    <div className={`w-5 h-5 rounded-md flex items-center justify-center transition-all`}
+                      style={{ background: (whatsapp as any)[key] ? '#6366F1' : 'var(--border)' }}>
+                      {(whatsapp as any)[key] && <Check size={14} color="#fff" />}
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{label}</p>
+                      <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{desc}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </Card>
+          </div>
+
+          <div className="space-y-5">
+            <Card>
+              <SectionHeader icon={Power} label="Status da Conexão" subtitle="Conecte seu WhatsApp" color="#25D366" />
+              
+              {whatsappStatus === 'disconnected' && (
+                <div className="space-y-4">
+                  <div className="flex flex-col items-center py-6 gap-3">
+                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(37,211,102,0.1)' }}>
+                      <MessageCircle size={32} style={{ color: '#25D366' }} />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>WhatsApp Desconectado</p>
+                      <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Clique em conectar para gerar o QR Code</p>
+                    </div>
+                  </div>
+                  <button onClick={handleConnectWhatsapp} disabled={loadingWhatsapp || !whatsapp.api_key || !whatsapp.instance_name}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-50"
+                    style={{ background: 'linear-gradient(135deg,#25D366,#128C7E)' }}>
+                    {loadingWhatsapp ? <Loader2 size={16} className="animate-spin" /> : <Power size={16} />}
+                    Conectar WhatsApp
+                  </button>
+                </div>
+              )}
+
+              {whatsappStatus === 'connecting' && qrCode && (
+                <div className="space-y-4">
+                  <div className="flex flex-col items-center py-4 gap-3">
+                    <p className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Escaneie o QR Code</p>
+                    <div className="p-4 rounded-2xl" style={{ background: '#fff' }}>
+                      <img src={qrCode} alt="QR Code" className="w-48 h-48" />
+                    </div>
+                    <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>Abra o WhatsApp no celular e escaneie este código</p>
+                  </div>
+                  <button onClick={handleCheckStatus} disabled={loadingWhatsapp}
+                    className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                    style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}>
+                    {loadingWhatsapp ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                    Verificar Status
+                  </button>
+                </div>
+              )}
+
+              {whatsappStatus === 'connected' && (
+                <div className="flex flex-col items-center py-6 gap-3">
+                  <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: 'rgba(16,185,129,0.1)' }}>
+                    <CheckCircle2 size={32} style={{ color: '#10B981' }} />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-bold" style={{ color: '#10B981' }}>WhatsApp Conectado</p>
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Mensagens serão enviadas automaticamente</p>
+                  </div>
+                </div>
+              )}
+            </Card>
+
+            <Card>
+              <SectionHeader icon={FileText} label="Como Funciona" subtitle="Mensagens automáticas por status" color="#6366F1" />
+              <div className="space-y-3 text-xs" style={{ color: 'var(--text-muted)' }}>
+                <div className="flex gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: '#6366F1' }} />
+                  <p><strong style={{ color: 'var(--text-primary)' }}>Pedido Criado:</strong> Resumo completo com itens, total e endereço</p>
+                </div>
+                <div className="flex gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: '#10B981' }} />
+                  <p><strong style={{ color: 'var(--text-primary)' }}>Confirmado:</strong> "Seu pedido foi confirmado!"</p>
+                </div>
+                <div className="flex gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: '#F59E0B' }} />
+                  <p><strong style={{ color: 'var(--text-primary)' }}>Em Preparo:</strong> "Nossos cozinheiros estão preparando..."</p>
+                </div>
+                <div className="flex gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: '#8B5CF6' }} />
+                  <p><strong style={{ color: 'var(--text-primary)' }}>Saiu p/ Entrega:</strong> "Seu pedido saiu para entrega!"</p>
+                </div>
+                <div className="flex gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: '#10B981' }} />
+                  <p><strong style={{ color: 'var(--text-primary)' }}>Entregue:</strong> "Bom apetite! Volte sempre!"</p>
+                </div>
+                <div className="flex gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: '#EF4444' }} />
+                  <p><strong style={{ color: 'var(--text-primary)' }}>Cancelado:</strong> "Infelizmente seu pedido foi cancelado."</p>
+                </div>
+              </div>
+            </Card>
+          </div>
         </div>
       )}
     </div>
