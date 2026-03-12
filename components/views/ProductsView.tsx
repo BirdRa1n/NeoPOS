@@ -5,8 +5,13 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { formatCurrency } from '@/lib/utils/format';
 import { ProductFormModal } from '@/components/ProductFormModal';
 import { useOverlayState } from '@heroui/react';
+import { Button } from '@/components/ui/Button';
+import { SearchBar } from '@/components/forms/SearchBar';
+import { StatCard } from '@/components/data/StatCard';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { Card } from '@/components/ui/Card';
 import {
-  Plus, Search, Edit, Trash2, Package, Tag, Star,
+  Plus, Edit, Trash2, Package, Tag,
   LayoutGrid, List, ImageOff, CheckCircle2, XCircle,
   AlertTriangle, Loader2
 } from 'lucide-react';
@@ -73,58 +78,32 @@ export function ProductsView() {
 
   return (
     <div className="space-y-5">
+      <PageHeader
+        title="Produtos"
+        subtitle="Gerencie seu catálogo de produtos"
+        action={
+          <Button onClick={handleNew} icon={<Plus size={15} />}>
+            Novo Produto
+          </Button>
+        }
+      />
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Produtos</h1>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Gerencie seu catálogo de produtos</p>
-        </div>
-        <button onClick={handleNew}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90"
-          style={{ background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', boxShadow: '0 4px 14px rgba(99,102,241,0.3)' }}>
-          <Plus size={15} />
-          Novo Produto
-        </button>
-      </div>
-
-      {/* Stats strip */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: 'Total', value: products.length, color: '#6366F1', icon: Package },
-          { label: 'Ativos', value: products.filter(p => p.available).length, color: '#10B981', icon: CheckCircle2 },
-          { label: 'Inativos', value: products.filter(p => !p.available).length, color: '#EF4444', icon: XCircle },
-          { label: 'Promoções', value: products.filter(p => p.promotional_price).length, color: '#F59E0B', icon: Tag },
-        ].map(({ label, value, color, icon: Icon }) => (
-          <div key={label} className="rounded-2xl px-4 py-3 flex items-center gap-3"
-            style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--surface-box)' }}>
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${color}15` }}>
-              <Icon size={15} style={{ color }} />
-            </div>
-            <div>
-              <p className="text-lg font-bold leading-none" style={{ color: 'var(--text-primary)' }}>{value}</p>
-              <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>{label}</p>
-            </div>
-          </div>
-        ))}
+        <StatCard label="Total" value={products.length} icon={Package} color="#6366F1" />
+        <StatCard label="Ativos" value={products.filter(p => p.available).length} icon={CheckCircle2} color="#10B981" />
+        <StatCard label="Inativos" value={products.filter(p => !p.available).length} icon={XCircle} color="#EF4444" />
+        <StatCard label="Promoções" value={products.filter(p => p.promotional_price).length} icon={Tag} color="#F59E0B" />
       </div>
 
-      {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center"
-        style={{}}>
-        <div className="relative flex-1 w-full">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-muted)' }} />
-          <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar produtos..."
-            className="w-full pl-9 pr-4 py-2 text-sm rounded-xl outline-none transition-all"
-            style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', boxShadow: 'var(--surface-box)' }}
-            onFocus={e => (e.currentTarget.style.borderColor = '#6366F1')}
-            onBlur={e => (e.currentTarget.style.borderColor = 'var(--border)')} />
-        </div>
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+        <SearchBar
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Buscar produtos..."
+          className="flex-1 w-full"
+        />
 
-        {/* View toggle */}
-        <div className="flex items-center gap-1 p-1 rounded-xl shrink-0"
-          style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
+        <Card className="flex items-center gap-1 p-1 shrink-0">
           {(['grid', 'list'] as ViewMode[]).map(mode => (
             <button key={mode} onClick={() => setViewMode(mode)}
               className="w-8 h-7 flex items-center justify-center rounded-lg transition-all"
@@ -135,7 +114,7 @@ export function ProductsView() {
               {mode === 'grid' ? <LayoutGrid size={14} /> : <List size={14} />}
             </button>
           ))}
-        </div>
+        </Card>
       </div>
 
       {/* Grid view */}
