@@ -393,9 +393,10 @@ export function StoreSettingsView() {
     if (!store) return;
     setSaving(true);
     try {
-      const res = await fetch('/api/functions/v1/whatsapp-config?action=save', {
+      const token = (await supabase.auth.getSession()).data.session?.access_token;
+      const res = await fetch('/api/functions/whatsapp-config?action=save', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ ...whatsapp, store_id: store.id }),
       });
       if (!res.ok) throw new Error('Erro ao salvar');
@@ -409,13 +410,39 @@ export function StoreSettingsView() {
     setLoadingWhatsapp(true);
     try {
       const token = (await supabase.auth.getSession()).data.session?.access_token;
-      const res = await fetch('/api/functions/v1/whatsapp-config?action=connect', {
+      const res = await fetch('/api/functions/whatsapp-config?action=connect', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
       });
       if (!res.ok) throw new Error('Erro ao conectar');
       setWhatsappStatus('connecting');
+
+      // Buscar QR code após 2 segundos
       setTimeout(() => handleGetQrCode(), 2000);
+
+      // Iniciar polling para verificar status a cada 5 segundos
+      const pollInterval = setInterval(async () => {
+        const token = (await supabase.auth.getSession()).data.session?.access_token;
+        const statusRes = await fetch('/api/functions/whatsapp-config?action=status', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+
+        if (statusRes.ok) {
+          const data = await statusRes.json();
+          const connected = data.instance?.state === 'open' || data.state === 'open';
+
+          if (connected) {
+            setWhatsappStatus('connected');
+            setQrCode(null);
+            clearInterval(pollInterval);
+          }
+        }
+      }, 5000);
+
+      // Limpar polling após 5 minutos
+      setTimeout(() => clearInterval(pollInterval), 300000);
+
     } catch (err: any) { alert(err.message); }
     finally { setLoadingWhatsapp(false); }
   };
@@ -423,30 +450,53 @@ export function StoreSettingsView() {
   const handleGetQrCode = async () => {
     try {
       const token = (await supabase.auth.getSession()).data.session?.access_token;
-      const res = await fetch('/api/functions/v1/whatsapp-config?action=qrcode', {
+      const res = await fetch('/api/functions/whatsapp-config?action=qrcode', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
       });
+
+      if (!res.ok) return;
+
       const data = await res.json();
-      if (data.qrcode) setQrCode(data.qrcode.base64);
-    } catch (err: any) { console.error(err); }
+      console.log('QR Code response:', data);
+
+      // A resposta é { success: true, data: { base64, code, pairingCode, count } }
+      const qr = data.data;
+
+      if (qr?.base64) {
+        setQrCode(qr.base64);           // já vem com "data:image/png;base64,..."
+      } else if (qr?.code) {
+        setQrCode(qr.code);
+      }
+    } catch (err) {
+      console.error('QR code error:', err);
+    }
   };
 
   const handleCheckStatus = async () => {
     setLoadingWhatsapp(true);
     try {
       const token = (await supabase.auth.getSession()).data.session?.access_token;
-      const res = await fetch('/api/functions/v1/whatsapp-config?action=status', {
+      const res = await fetch('/api/functions/whatsapp-config?action=status', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
       });
-      const data = await res.json();
-      if (data.connected) {
+
+      const json = await res.json();
+      console.log('Status response:', json);
+
+      // Resposta é { success, data: { instance: { instanceName, state } } }
+      const state = json.data?.instance?.state;
+
+      if (state === 'open') {
         setWhatsappStatus('connected');
         setQrCode(null);
       }
-    } catch (err: any) { alert(err.message); }
-    finally { setLoadingWhatsapp(false); }
+    } catch (err: any) {
+      console.error('Status check error:', err);
+    } finally {
+      setLoadingWhatsapp(false);
+    }
   };
 
   const catalogUrl = info.nickname ? `${typeof window !== 'undefined' ? window.location.origin : ''}/${info.nickname}/catalogo` : '';
@@ -953,7 +1003,7 @@ export function StoreSettingsView() {
           <div className="space-y-5">
             <Card>
               <SectionHeader icon={Power} label="Status da Conexão" subtitle="Conecte seu WhatsApp" color="#25D366" />
-              
+
               {whatsappStatus === 'disconnected' && (
                 <div className="space-y-4">
                   <div className="flex flex-col items-center py-6 gap-3">
