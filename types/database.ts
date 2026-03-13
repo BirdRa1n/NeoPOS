@@ -3,6 +3,8 @@ export type OrderType = 'delivery' | 'pickup' | 'table';
 export type PaymentMethod = 'cash' | 'credit_card' | 'debit_card' | 'pix' | 'meal_voucher' | 'other';
 export type StockMovementType = 'purchase' | 'manual_out' | 'adjustment' | 'order';
 export type Unit = 'unit' | 'kg' | 'g' | 'liter' | 'ml' | 'portion';
+export type PaymentStatus = 'unpaid' | 'paid';
+
 
 export interface Store {
   id: string;
@@ -226,4 +228,20 @@ export interface DailySummary {
   net_revenue: number;
   created_at: string;
   updated_at: string;
+}
+
+export type ProductMovementType = 'entrada' | 'saida_manual' | 'ajuste';
+
+export interface ProductStockItem {
+  id: string;
+  product_id: string;
+  store_id: string;
+  name: string;
+  category: string | null;
+  current_quantity: number;
+  minimum_quantity: number;
+  unit_cost: number;
+  stock_value: number;
+  below_minimum: boolean;
+  active: boolean;
 }

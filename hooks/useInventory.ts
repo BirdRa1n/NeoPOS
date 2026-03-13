@@ -1,10 +1,37 @@
 import { useState, useEffect } from 'react';
-import { Supply, StockMovement } from '@/types/database';
+import { Supply, StockMovement, ProductStockItem } from '@/types/database';
 import { supabase } from '@/supabase/client';
 import { useStore } from '@/contexts/StoreContext';
 
 export function useInventory() {
   return useSupplies();
+}
+
+export function useProductStock() {
+  const { store } = useStore();
+  const [productStocks, setProductStocks] = useState<ProductStockItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetch = async () => {
+    if (!store) return;
+    setLoading(true);
+    const { data } = await supabase
+      .schema('inventory')
+      .from('product_stock_summary')
+      .select('*')
+      .eq('store_id', store.id)
+      .eq('active', true)
+      .order('name');
+    
+    if (data) setProductStocks(data);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetch();
+  }, [store]);
+
+  return { productStocks, loading, refetch: fetch };
 }
 
 export function useSupplies() {
