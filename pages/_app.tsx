@@ -3,6 +3,7 @@ import type { AppProps } from "next/app";
 import { AuthProvider } from '@/contexts/AuthContext';
 import { StoreProvider } from '@/contexts/StoreContext';
 import { Toaster } from 'react-hot-toast';
+import { PWAInstallPrompt } from '@/components/PWAInstallPrompt';
 import { useEffect } from 'react';
 
 export default function App({ Component, pageProps }: AppProps) {
@@ -24,6 +25,7 @@ export default function App({ Component, pageProps }: AppProps) {
       <StoreProvider>
         <Component {...pageProps} />
         <Toaster position="top-right" />
+        <PWAInstallPrompt />
       </StoreProvider>
     </AuthProvider>
   );

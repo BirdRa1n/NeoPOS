@@ -546,6 +546,20 @@ function DashboardContent({ user, store, pending, activeTab, setActiveTab, colla
   const vars = THEMES[theme];
   const { title, subtitle } = PAGE_META[activeTab];
 
+  // Atualiza theme-color para iOS
+  useEffect(() => {
+    const bgColor = theme === 'dark' ? '#080B12' : '#F1F4FA';
+    let metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    
+    if (!metaThemeColor) {
+      metaThemeColor = document.createElement('meta');
+      metaThemeColor.setAttribute('name', 'theme-color');
+      document.head.appendChild(metaThemeColor);
+    }
+    
+    metaThemeColor.setAttribute('content', bgColor);
+  }, [theme]);
+
   const renderView = () => {
     switch (activeTab) {
       case 'dashboard': return <DashboardHome />;

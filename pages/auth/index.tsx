@@ -1045,6 +1045,20 @@ export default function AuthPage() {
         });
     }, []);
 
+    // Atualiza theme-color para iOS
+    useEffect(() => {
+        const bgColor = theme === 'dark' ? '#080B12' : '#F1F4FA';
+        let metaThemeColor = document.querySelector('meta[name="theme-color"]');
+        
+        if (!metaThemeColor) {
+            metaThemeColor = document.createElement('meta');
+            metaThemeColor.setAttribute('name', 'theme-color');
+            document.head.appendChild(metaThemeColor);
+        }
+        
+        metaThemeColor.setAttribute('content', bgColor);
+    }, [theme]);
+
     // Prevent flash of wrong theme before hydration
     if (!ready) return null;
 
