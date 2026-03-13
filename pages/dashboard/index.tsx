@@ -56,12 +56,12 @@ function Sidebar({ activeTab, onTabChange, pendingCount, collapsed, storeName, u
     }`}
       style={{ 
         width: isMobile ? 240 : (collapsed ? 72 : 240), 
-        background: 'linear-gradient(180deg,#0F1117 0%,#0A0D14 100%)', 
-        borderRight: '1px solid rgba(255,255,255,0.05)' 
+        background: 'var(--sidebar-bg)', 
+        borderRight: '1px solid var(--sidebar-border)' 
       }}>
 
       {/* Logo */}
-      <div className="h-16 flex items-center px-4 shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <div className="h-16 flex items-center px-4 shrink-0" style={{ borderBottom: '1px solid var(--sidebar-border)' }}>
         {(collapsed && !isMobile) ? (
           <div className="mx-auto w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#6366F1,#8B5CF6)' }}>
             <Box width={16} height={16} color="#fff" />
@@ -71,7 +71,7 @@ function Sidebar({ activeTab, onTabChange, pendingCount, collapsed, storeName, u
             <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg,#6366F1,#8B5CF6)' }}>
               <Box width={16} height={16} color="#fff" />
             </div>
-            <span className="text-white font-bold text-sm tracking-wide truncate">NeoDelivery</span>
+            <span className="font-bold text-sm tracking-wide truncate" style={{ color: 'var(--sidebar-store-text)' }}>NeoDelivery</span>
           </div>
         )}
       </div>
@@ -79,9 +79,9 @@ function Sidebar({ activeTab, onTabChange, pendingCount, collapsed, storeName, u
       {/* Store pill */}
       {(!collapsed || isMobile) && (
         <div className="mx-3 mt-3 px-3 py-2 rounded-xl shrink-0"
-          style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.15)' }}>
-          <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest mb-0.5">Loja</p>
-          <p className="text-white text-xs font-bold truncate">{storeName}</p>
+          style={{ background: 'var(--sidebar-store-bg)', border: '1px solid var(--sidebar-store-border)' }}>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-0.5" style={{ color: 'var(--sidebar-accent)' }}>Loja</p>
+          <p className="text-xs font-bold truncate" style={{ color: 'var(--sidebar-store-text)' }}>{storeName}</p>
         </div>
       )}
 
@@ -93,10 +93,12 @@ function Sidebar({ activeTab, onTabChange, pendingCount, collapsed, storeName, u
           return (
             <button key={id} onClick={() => onTabChange(id)} title={collapsed ? label : undefined}
               className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all duration-150 relative"
-              style={{ background: active ? 'rgba(99,102,241,0.15)' : 'transparent' }}>
-              {active && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full bg-indigo-400" />}
-              <Icon size={17} className="shrink-0" style={{ color: active ? '#818CF8' : 'rgba(255,255,255,0.38)' }} />
-              {(!collapsed || isMobile) && <span className="text-sm font-medium flex-1 truncate" style={{ color: active ? '#A5B4FC' : 'rgba(255,255,255,0.42)' }}>{label}</span>}
+              style={{ background: active ? 'var(--sidebar-item-active-bg)' : 'transparent' }}
+              onMouseEnter={e => !active && ((e.currentTarget as HTMLElement).style.background = 'var(--sidebar-item-hover-bg)')}
+              onMouseLeave={e => !active && ((e.currentTarget as HTMLElement).style.background = 'transparent')}>
+              {active && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full" style={{ background: 'var(--sidebar-icon-active)' }} />}
+              <Icon size={17} className="shrink-0" style={{ color: active ? 'var(--sidebar-icon-active)' : 'var(--sidebar-icon)' }} />
+              {(!collapsed || isMobile) && <span className="text-sm font-medium flex-1 truncate" style={{ color: active ? 'var(--sidebar-text-active)' : 'var(--sidebar-text)' }}>{label}</span>}
               {(!collapsed || isMobile) && badge > 0 && (
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(239,68,68,0.2)', color: '#FCA5A5' }}>
                   {badge > 99 ? '99+' : badge}
@@ -109,13 +111,13 @@ function Sidebar({ activeTab, onTabChange, pendingCount, collapsed, storeName, u
       </nav>
 
       {/* User */}
-      <div className="shrink-0 p-3" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      <div className="shrink-0 p-3" style={{ borderTop: '1px solid var(--sidebar-border)' }}>
         {(collapsed && !isMobile) ? (
           <button onClick={onSignOut}
             className="w-full flex justify-center p-2 rounded-xl transition-all"
-            style={{ color: 'rgba(255,255,255,0.3)' }}
+            style={{ color: 'var(--sidebar-icon)' }}
             onMouseEnter={e => { Object.assign((e.currentTarget as HTMLElement).style, { color: '#F87171', background: 'rgba(239,68,68,0.1)' }); }}
-            onMouseLeave={e => { Object.assign((e.currentTarget as HTMLElement).style, { color: 'rgba(255,255,255,0.3)', background: 'transparent' }); }}>
+            onMouseLeave={e => { Object.assign((e.currentTarget as HTMLElement).style, { color: 'var(--sidebar-icon)', background: 'transparent' }); }}>
             <LogOut size={16} />
           </button>
         ) : (
@@ -125,14 +127,14 @@ function Sidebar({ activeTab, onTabChange, pendingCount, collapsed, storeName, u
               {userEmail?.[0]?.toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white text-xs font-semibold truncate">{userEmail?.split('@')[0]}</p>
-              <p className="text-[10px] truncate" style={{ color: 'rgba(255,255,255,0.3)' }}>Administrador</p>
+              <p className="text-xs font-semibold truncate" style={{ color: 'var(--sidebar-store-text)' }}>{userEmail?.split('@')[0]}</p>
+              <p className="text-[10px] truncate" style={{ color: 'var(--sidebar-icon)' }}>Administrador</p>
             </div>
             <button onClick={onSignOut}
               className="p-1.5 rounded-lg transition-all"
-              style={{ color: 'rgba(255,255,255,0.3)' }}
+              style={{ color: 'var(--sidebar-icon)' }}
               onMouseEnter={e => { Object.assign((e.currentTarget as HTMLElement).style, { color: '#F87171', background: 'rgba(239,68,68,0.1)' }); }}
-              onMouseLeave={e => { Object.assign((e.currentTarget as HTMLElement).style, { color: 'rgba(255,255,255,0.3)', background: 'transparent' }); }}>
+              onMouseLeave={e => { Object.assign((e.currentTarget as HTMLElement).style, { color: 'var(--sidebar-icon)', background: 'transparent' }); }}>
               <LogOut size={14} />
             </button>
           </div>
@@ -144,8 +146,27 @@ function Sidebar({ activeTab, onTabChange, pendingCount, collapsed, storeName, u
 
 // ─── Topbar ───────────────────────────────────────────────────────────────────
 function Topbar({ onToggle, title, subtitle }: { onToggle: () => void; title: string; subtitle: string }) {
-  const { theme, toggle } = useTheme();
+  const { theme, mode, setMode } = useTheme();
   const isDark = theme === 'dark';
+  
+  const cycleTheme = () => {
+    if (mode === 'auto') setMode('light');
+    else if (mode === 'light') setMode('dark');
+    else setMode('auto');
+  };
+
+  const getThemeIcon = () => {
+    if (mode === 'auto') return '🌓';
+    if (mode === 'light') return <Sun size={15} />;
+    return <Moon size={15} />;
+  };
+
+  const getThemeLabel = () => {
+    if (mode === 'auto') return 'Auto';
+    if (mode === 'light') return 'Claro';
+    return 'Escuro';
+  };
+
   return (
     <header className="h-16 flex items-center gap-4 px-6 shrink-0 sticky top-0 z-30 backdrop-blur-xl"
       style={{ background: 'var(--header-bg)', borderBottom: '1px solid var(--border)' }}>
@@ -173,12 +194,13 @@ function Topbar({ onToggle, title, subtitle }: { onToggle: () => void; title: st
         </div>
 
         {/* Theme toggle */}
-        <button onClick={toggle} title={isDark ? 'Modo claro' : 'Modo escuro'}
-          className="w-9 h-9 flex items-center justify-center rounded-xl transition-all"
+        <button onClick={cycleTheme} title={`Tema: ${getThemeLabel()}`}
+          className="h-9 px-3 flex items-center justify-center gap-2 rounded-xl transition-all"
           style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: isDark ? 'rgba(255,255,255,0.4)' : '#6B7280', boxShadow: 'var(--surface-box)' }}
           onMouseEnter={e => Object.assign((e.currentTarget as HTMLElement).style, { color: isDark ? '#FCD34D' : '#6366F1', borderColor: isDark ? 'rgba(252,211,77,0.3)' : 'rgba(99,102,241,0.3)' })}
           onMouseLeave={e => Object.assign((e.currentTarget as HTMLElement).style, { color: isDark ? 'rgba(255,255,255,0.4)' : '#6B7280', borderColor: 'var(--border)' })}>
-          {isDark ? <Sun size={15} /> : <Moon size={15} />}
+          <span className="text-sm">{getThemeIcon()}</span>
+          <span className="text-xs font-medium hidden sm:inline">{getThemeLabel()}</span>
         </button>
 
         <button className="relative w-9 h-9 flex items-center justify-center rounded-xl"

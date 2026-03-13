@@ -12,30 +12,52 @@ import {
 } from 'lucide-react';
 
 // ─── Theme hook — detects OS preference, allows manual override ───────────────
+type ThemeMode = 'auto' | 'dark' | 'light';
+
 function useTheme() {
+    const [mode, setMode] = useState<ThemeMode>('auto');
     const [theme, setTheme] = useState<'dark' | 'light'>('dark');
     const [ready, setReady] = useState(false);
 
     useEffect(() => {
-        const saved = localStorage.getItem('neo-auth-theme') as 'dark' | 'light' | null;
-        const mq = window.matchMedia('(prefers-color-scheme: light)');
-        setTheme(saved ?? (mq.matches ? 'light' : 'dark'));
+        const saved = localStorage.getItem('neo-auth-theme-mode') as ThemeMode | null;
+        const savedMode = saved === 'auto' || saved === 'dark' || saved === 'light' ? saved : 'auto';
+        setMode(savedMode);
+
+        const mq = window.matchMedia('(prefers-color-scheme: dark)');
+        
+        const updateTheme = () => {
+            if (savedMode === 'auto') {
+                setTheme(mq.matches ? 'dark' : 'light');
+            } else {
+                setTheme(savedMode);
+            }
+        };
+
+        updateTheme();
         setReady(true);
 
-        const handler = (e: MediaQueryListEvent) => {
-            if (!localStorage.getItem('neo-auth-theme')) setTheme(e.matches ? 'light' : 'dark');
+        const handler = () => {
+            if (mode === 'auto') updateTheme();
         };
         mq.addEventListener('change', handler);
         return () => mq.removeEventListener('change', handler);
-    }, []);
+    }, [mode]);
 
-    const toggle = () => {
-        const next = theme === 'dark' ? 'light' : 'dark';
-        setTheme(next);
-        localStorage.setItem('neo-auth-theme', next);
+    const cycleMode = () => {
+        const next: ThemeMode = mode === 'auto' ? 'light' : mode === 'light' ? 'dark' : 'auto';
+        setMode(next);
+        localStorage.setItem('neo-auth-theme-mode', next);
+        
+        if (next === 'auto') {
+            const mq = window.matchMedia('(prefers-color-scheme: dark)');
+            setTheme(mq.matches ? 'dark' : 'light');
+        } else {
+            setTheme(next);
+        }
     };
 
-    return { theme, toggle, ready };
+    return { theme, mode, cycleMode, ready };
 }
 
 // ─── Design tokens per theme ─────────────────────────────────────────────────
@@ -238,11 +260,11 @@ function buildCSS(tk: Tok, isDark: boolean) {
 
 .theme-toggle{
   position:fixed;top:20px;right:20px;z-index:100;
-  width:40px;height:40px;background:${tk.toggleBg};border:1px solid ${tk.toggleBorder};
-  border-radius:12px;display:flex;align-items:center;justify-content:center;
+  width:48px;height:48px;background:${tk.toggleBg};border:1px solid ${tk.toggleBorder};
+  border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
   cursor:pointer;transition:all .2s;color:${tk.toggleColor};
 }
-.theme-toggle:hover{transform:rotate(12deg) scale(1.08);}
+.theme-toggle:hover{transform:scale(1.08);}
 
 @media(max-width:768px){
   .desktop-left{display:none!important;}
@@ -1009,7 +1031,7 @@ function ProgressHeader({ step, tk }: { step: AuthStep; tk: Tok }) {
 // ─── Root page ────────────────────────────────────────────────────────────────
 export default function AuthPage() {
     const router = useRouter();
-    const { theme, toggle, ready } = useTheme();
+    const { theme, mode, cycleMode, ready } = useTheme();
     const isDark = theme === 'dark';
     const tk = T[theme];
 
@@ -1027,6 +1049,18 @@ export default function AuthPage() {
     if (!ready) return null;
 
     const css = buildCSS(tk, isDark);
+
+    const getThemeIcon = () => {
+        if (mode === 'auto') return '🌓';
+        if (mode === 'light') return <Sun size={16} />;
+        return <Moon size={16} />;
+    };
+
+    const getThemeLabel = () => {
+        if (mode === 'auto') return 'Auto';
+        if (mode === 'light') return 'Claro';
+        return 'Escuro';
+    };
 
     const rightContent = () => {
         if (step === 'done') return <SuccessScreen />;
@@ -1053,10 +1087,10 @@ export default function AuthPage() {
                 <GridBackground tk={tk} />
 
                 {/* ── Theme toggle ── */}
-                <button className="theme-toggle" onClick={toggle} title={isDark ? 'Mudar para claro' : 'Mudar para escuro'}>
-                    {isDark
-                        ? <Sun size={16} />
-                        : <Moon size={16} />}
+                <button className="theme-toggle" onClick={cycleMode} title={`Tema: ${getThemeLabel()}`}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, width: 48, height: 48 }}>
+                    <span style={{ fontSize: 16 }}>{getThemeIcon()}</span>
+                    <span style={{ fontSize: 8, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', opacity: 0.7 }}>{getThemeLabel()}</span>
                 </button>
 
                 <div style={{ flex: 1, display: 'flex', alignItems: 'stretch', position: 'relative', zIndex: 1, minHeight: '100vh' }}>
