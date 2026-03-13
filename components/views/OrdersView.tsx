@@ -1,4 +1,4 @@
-import { useState, useContext, createContext, useContext as useCtx } from 'react';
+import { useState, useEffect } from 'react';
 import { useOrders } from '@/hooks/useOrders';
 import { useCustomers } from '@/hooks/useCustomers';
 import { useProducts } from '@/hooks/useProducts';
@@ -11,7 +11,8 @@ import {
   Search, Eye, ShoppingCart, Clock, CheckCircle2, XCircle,
   Truck, Package, UtensilsCrossed, Filter, ChevronDown,
   ArrowUpRight, RotateCcw, Plus, X, Loader2, User, Phone,
-  MapPin, Minus, DollarSign, AlertTriangle
+  MapPin, Minus, DollarSign, AlertTriangle, Edit2, Banknote,
+  CreditCard, Smartphone, Wallet, CheckSquare
 } from 'lucide-react';
 import type { OrderStatus } from '@/types';
 
@@ -49,6 +50,18 @@ function OrderModal({ storeId, onClose, onSuccess }: { storeId: string; onClose:
   const { products = [] } = useProducts() as any;
   const { zones = [] } = useDeliveryZones() as any;
   const { drivers = [] } = useDeliveryDrivers() as any;
+
+  // Alerta de estoque baixo
+  const [lowStockItems, setLowStockItems] = useState<string[]>([]);
+  useEffect(() => {
+    supabase.schema('inventory').from('product_stock_summary')
+      .select('name, below_minimum')
+      .eq('store_id', storeId)
+      .eq('below_minimum', true)
+      .then(({ data }) => {
+        if (data) setLowStockItems(data.map((d: any) => d.name));
+      });
+  }, [storeId]);
 
   const [form, setForm] = useState({
     order_type: 'delivery',
@@ -185,6 +198,24 @@ function OrderModal({ storeId, onClose, onSuccess }: { storeId: string; onClose:
         <ModalHeader title="Novo Pedido" subtitle="Registre um novo pedido" icon={ShoppingCart} onClose={onClose} />
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
           <div className="p-6 space-y-5">
+            {/* Alerta de estoque baixo — não-bloqueante */}
+            {lowStockItems.length > 0 && (
+              <div className="flex items-start gap-3 p-3 rounded-xl"
+                style={{
+                  background: isDark ? 'rgba(245,158,11,0.08)' : 'rgba(245,158,11,0.06)',
+                  border: `1px solid ${isDark ? 'rgba(245,158,11,0.25)' : 'rgba(245,158,11,0.2)'}`,
+                }}>
+                <AlertTriangle size={16} style={{ color: '#F59E0B', flexShrink: 0, marginTop: 1 }} />
+                <div>
+                  <p className="text-xs font-bold" style={{ color: isDark ? '#FCD34D' : '#92400E' }}>
+                    Atenção: estoque baixo
+                  </p>
+                  <p className="text-[11px] mt-0.5" style={{ color: isDark ? 'rgba(252,211,77,0.8)' : '#B45309' }}>
+                    Verifique a disponibilidade antes de confirmar: {lowStockItems.slice(0, 4).join(', ')}{lowStockItems.length > 4 ? ` e mais ${lowStockItems.length - 4}...` : ''}
+                  </p>
+                </div>
+              </div>
+            )}
             <div className="flex items-center gap-3"><p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#6366F1" }}>Tipo de Pedido</p><div className="flex-1 h-px" style={{ background: "var(--border)" }} /></div>
             <div className="grid grid-cols-3 gap-3">
               {[
@@ -368,101 +399,205 @@ function OrderModal({ storeId, onClose, onSuccess }: { storeId: string; onClose:
               </div>
             </div>
           </div>
-          <ModalFooter onCancel={onClose} onSubmit={() => {}} saving={saving} saveLabel="Criar Pedido" />
+          <ModalFooter onCancel={onClose} onSubmit={() => { }} saving={saving} saveLabel="Criar Pedido" />
         </form>
       </ModalShell>
     </ModalBackdrop>
   );
 }
 
+// ─── helpers ──────────────────────────────────────────────────────────────────
+const PAYMENT_LABELS: Record<string, string> = {
+  cash: 'Dinheiro', credit_card: 'Cartão de Crédito',
+  debit_card: 'Cartão de Débito', pix: 'PIX',
+  meal_voucher: 'Vale Refeição', other: 'Outro',
+};
+const PAYMENT_ICONS: Record<string, React.FC<any>> = {
+  cash: Banknote, credit_card: CreditCard,
+  debit_card: Wallet, pix: Smartphone,
+  meal_voucher: CreditCard, other: DollarSign,
+};
+
 // ─── Order Details Modal ──────────────────────────────────────────────────────
-function OrderDetailsModal({ order, onClose, onStatusChange }: { order: any; onClose: () => void; onStatusChange: () => void }) {
+function OrderDetailsModal({ order: initialOrder, onClose, onStatusChange }: {
+  order: any; onClose: () => void; onStatusChange: () => void;
+}) {
   const isDark = useIsDark();
+  const [order, setOrder] = useState<any>(initialOrder);
   const [updating, setUpdating] = useState(false);
+  const [markingPaid, setMarkingPaid] = useState(false);
   const [items, setItems] = useState<any[]>([]);
   const [loadingItems, setLoadingItems] = useState(true);
 
-  useState(() => {
-    const fetchItems = async () => {
-      const { data } = await supabase
-        .schema('orders')
-        .from('order_items')
-        .select('*')
-        .eq('order_id', order.id);
-      if (data) setItems(data);
-      setLoadingItems(false);
-    };
-    fetchItems();
-  });
+  // edit mode
+  const [editing, setEditing] = useState(false);
+  const [editItems, setEditItems] = useState<any[]>([]);
+  const [editPayment, setEditPayment] = useState(order.payment_method);
+  const [editNotes, setEditNotes] = useState(order.notes ?? '');
+  const [savingEdit, setSavingEdit] = useState(false);
 
+  useEffect(() => {
+    supabase.schema('orders').from('order_items').select('*').eq('order_id', order.id)
+      .then(({ data }) => { if (data) { setItems(data); setEditItems(data.map(i => ({ ...i }))); } setLoadingItems(false); });
+  }, [order.id]);
+
+  // ── status ──
   const handleStatusChange = async (newStatus: string) => {
     setUpdating(true);
     try {
-      const { error } = await supabase
-        .schema('orders')
-        .from('orders')
-        .update({ status: newStatus })
-        .eq('id', order.id);
+      const { error } = await supabase.schema('orders').from('orders').update({ status: newStatus }).eq('id', order.id);
       if (error) throw error;
-      order.status = newStatus;
+      setOrder((o: any) => ({ ...o, status: newStatus }));
       onStatusChange();
     } catch (err: any) { alert(err.message); }
     finally { setUpdating(false); }
   };
 
-  const handleMarkAsDelivered = async () => {
-    setUpdating(true);
+  // ── marcar como pago ──
+  const handleMarkPaid = async () => {
+    setMarkingPaid(true);
     try {
-      const { error } = await supabase.schema('orders')
-        .from('orders')
-        .update({ status: 'delivered' })
-        .eq('id', order.id);
+      const { error } = await supabase.schema('orders').from('orders')
+        .update({ payment_status: 'paid' }).eq('id', order.id);
       if (error) throw error;
-      order.status = 'delivered';
+      setOrder((o: any) => ({ ...o, payment_status: 'paid' }));
       onStatusChange();
     } catch (err: any) { alert(err.message); }
-    finally { setUpdating(false); }
-  }
+    finally { setMarkingPaid(false); }
+  };
+
+  // ── edição de itens ──
+  const updateEditQty = (id: string, delta: number) => {
+    setEditItems(prev => prev.map(i => i.id === id
+      ? { ...i, quantity: Math.max(1, i.quantity + delta), subtotal: i.unit_price * Math.max(1, i.quantity + delta) }
+      : i
+    ));
+  };
+  const removeEditItem = (id: string) => setEditItems(prev => prev.filter(i => i.id !== id));
+
+  // ── salvar edição ──
+  const handleSaveEdit = async () => {
+    setSavingEdit(true);
+    try {
+      if (editItems.length === 0) { alert('O pedido precisa ter pelo menos 1 item.'); return; }
+
+      // atualizar quantities nos order_items
+      for (const item of editItems) {
+        const original = items.find(i => i.id === item.id);
+        if (original && (original.quantity !== item.quantity)) {
+          const { error } = await supabase.schema('orders').from('order_items')
+            .update({ quantity: item.quantity, subtotal: item.unit_price * item.quantity })
+            .eq('id', item.id);
+          if (error) throw error;
+        }
+      }
+      // remover itens deletados
+      const removedIds = items.filter(i => !editItems.find(e => e.id === i.id)).map(i => i.id);
+      if (removedIds.length > 0) {
+        const { error } = await supabase.schema('orders').from('order_items').delete().in('id', removedIds);
+        if (error) throw error;
+      }
+
+      // recalcular subtotal/total
+      const newSubtotal = editItems.reduce((s, i) => s + i.unit_price * i.quantity, 0);
+      const newTotal = newSubtotal + (order.delivery_fee ?? 0) - (order.discount ?? 0);
+
+      const { error: orderErr } = await supabase.schema('orders').from('orders').update({
+        payment_method: editPayment,
+        notes: editNotes || null,
+        subtotal: newSubtotal,
+        total: newTotal,
+      }).eq('id', order.id);
+      if (orderErr) throw orderErr;
+
+      setOrder((o: any) => ({ ...o, payment_method: editPayment, notes: editNotes, subtotal: newSubtotal, total: newTotal }));
+      setItems(editItems);
+      setEditing(false);
+      onStatusChange();
+    } catch (err: any) { alert(err.message ?? 'Erro ao salvar'); }
+    finally { setSavingEdit(false); }
+  };
 
   const statusFlow = ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'delivered'];
   const currentIndex = statusFlow.indexOf(order.status);
   const nextStatus = statusFlow[currentIndex + 1];
   const prevStatus = statusFlow[currentIndex - 1];
+  const isTable = order.type === 'table' || order.order_type === 'table';
+  const isPaid = order.payment_status === 'paid';
+  const PayIcon = PAYMENT_ICONS[order.payment_method] ?? DollarSign;
+
+  const displayItems = editing ? editItems : items;
+  const displaySubtotal = editing
+    ? editItems.reduce((s, i) => s + i.unit_price * i.quantity, 0)
+    : order.subtotal;
+  const displayTotal = displaySubtotal + (order.delivery_fee ?? 0) - (order.discount ?? 0);
 
   return (
     <ModalBackdrop onClose={onClose}>
       <ModalShell maxW="max-w-2xl">
-        <ModalHeader title={`Pedido #${order.order_number || order.id.slice(0, 6)}`} subtitle={`Criado em ${new Date(order.created_at).toLocaleString('pt-BR')}`} icon={ShoppingCart} onClose={onClose} />
+        <ModalHeader
+          title={`Pedido #${order.order_number || order.id.slice(0, 6)}`}
+          subtitle={`Criado em ${new Date(order.created_at).toLocaleString('pt-BR')}`}
+          icon={ShoppingCart}
+          onClose={onClose}
+        />
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
+
+          {/* Alerta de pagamento pendente para mesas */}
+          {isTable && !isPaid && (
+            <div className="flex items-center gap-3 p-3 rounded-xl"
+              style={{ background: isDark ? 'rgba(245,158,11,0.08)' : 'rgba(245,158,11,0.06)', border: `1px solid ${isDark ? 'rgba(245,158,11,0.25)' : 'rgba(245,158,11,0.2)'}` }}>
+              <AlertTriangle size={16} style={{ color: '#F59E0B', flexShrink: 0 }} />
+              <div className="flex-1">
+                <p className="text-xs font-bold" style={{ color: isDark ? '#FCD34D' : '#92400E' }}>Pagamento pendente</p>
+                <p className="text-[11px]" style={{ color: isDark ? 'rgba(252,211,77,0.8)' : '#B45309' }}>
+                  Este pedido de mesa ainda não foi cobrado.
+                </p>
+              </div>
+              <button onClick={handleMarkPaid} disabled={markingPaid}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-60 transition-all whitespace-nowrap"
+                style={{ background: 'linear-gradient(135deg,#10B981,#059669)', boxShadow: '0 2px 8px rgba(16,185,129,0.3)' }}>
+                {markingPaid ? <Loader2 size={12} className="animate-spin" /> : <CheckSquare size={12} />}
+                Marcar como pago
+              </button>
+            </div>
+          )}
+          {isTable && isPaid && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
+              style={{ background: isDark ? 'rgba(16,185,129,0.08)' : 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)' }}>
+              <CheckSquare size={14} style={{ color: '#10B981' }} />
+              <span className="text-xs font-semibold" style={{ color: isDark ? '#6EE7B7' : '#065F46' }}>Pago</span>
+            </div>
+          )}
+
           {/* Status */}
           <div>
             <div className="flex items-center gap-3"><p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#6366F1" }}>Status do Pedido</p><div className="flex-1 h-px" style={{ background: "var(--border)" }} /></div>
-            <div className="mt-3 flex items-center gap-3">
+            <div className="mt-3 flex flex-wrap items-center gap-2">
               <StatusBadge status={order.status} />
-              <div className="flex gap-2">
-                {prevStatus && (
-                  <button onClick={() => handleStatusChange(prevStatus)} disabled={updating}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
-                    style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
-                    ← Voltar
-                  </button>
-                )}
-                {nextStatus && (
-                  <button onClick={() => handleStatusChange(nextStatus)} disabled={updating}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all disabled:opacity-50"
-                    style={{ background: 'linear-gradient(135deg,#10B981,#059669)' }}>
-                    {updating ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
-                    Avançar →
-                  </button>
-                )}
-              </div>
-
-              <button onClick={handleMarkAsDelivered} style={{ background: 'rgba(16,185,129,0.06)', color: '#10B981' }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all disabled:opacity-50">
-                <CheckCircle2 size={12} />
-                Marcar como entregue
-              </button>
+              {prevStatus && (
+                <button onClick={() => handleStatusChange(prevStatus)} disabled={updating}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
+                  style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+                  ← Voltar
+                </button>
+              )}
+              {nextStatus && (
+                <button onClick={() => handleStatusChange(nextStatus)} disabled={updating}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
+                  style={{ background: 'linear-gradient(135deg,#10B981,#059669)' }}>
+                  {updating ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                  Avançar →
+                </button>
+              )}
+              {order.status !== 'delivered' && (
+                <button onClick={() => handleStatusChange('delivered')} disabled={updating}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50"
+                  style={{ background: 'rgba(16,185,129,0.08)', color: '#10B981', border: '1px solid rgba(16,185,129,0.2)' }}>
+                  <CheckCircle2 size={12} /> Marcar como entregue
+                </button>
+              )}
             </div>
-
           </div>
 
           {/* Cliente */}
@@ -470,7 +605,7 @@ function OrderDetailsModal({ order, onClose, onStatusChange }: { order: any; onC
             <div className="flex items-center gap-3"><p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#8B5CF6" }}>Cliente</p><div className="flex-1 h-px" style={{ background: "var(--border)" }} /></div>
             <div className="mt-3 p-4 rounded-xl" style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
               <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                {order.customer?.name || 'Cliente não informado'}
+                {order.customer?.name || (isTable && order.table_number ? `Mesa ${order.table_number}` : 'Cliente não informado')}
               </p>
               {order.customer?.phone && (
                 <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
@@ -481,61 +616,100 @@ function OrderDetailsModal({ order, onClose, onStatusChange }: { order: any; onC
           </div>
 
           {/* Entrega */}
-          {order.type === 'delivery' && order.delivery_address && (
+          {(order.type === 'delivery' || order.order_type === 'delivery') && order.delivery_address && (
             <div>
               <div className="flex items-center gap-3"><p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#10B981" }}>Entrega</p><div className="flex-1 h-px" style={{ background: "var(--border)" }} /></div>
               <div className="mt-3 p-4 rounded-xl" style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
                 <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                  <MapPin size={12} className="inline mr-1" />{order.delivery_address} - {order.zone?.neighborhood || 'Bairro'}
+                  <MapPin size={12} className="inline mr-1" />{order.delivery_address}
+                  {order.delivery_neighborhood && ` — ${order.delivery_neighborhood}`}
                 </p>
-                {order?.delivery_complement && (
-                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                    Complemento: {order.delivery_complement}
-                  </p>
+                {order.delivery_complement && (
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Complemento: {order.delivery_complement}</p>
                 )}
                 {order.delivery_fee > 0 && (
-                  <p className="text-xs mt-2 font-semibold" style={{ color: '#10B981' }}>
-                    Taxa: {formatCurrency(order.delivery_fee)}
-                  </p>
+                  <p className="text-xs mt-2 font-semibold" style={{ color: '#10B981' }}>Taxa: {formatCurrency(order.delivery_fee)}</p>
                 )}
               </div>
             </div>
           )}
 
-          {/* Itens */}
+          {/* Itens + modo edição */}
           <div>
-            <div className="flex items-center gap-3"><p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#F59E0B" }}>Itens do Pedido</p><div className="flex-1 h-px" style={{ background: "var(--border)" }} /></div>
+            <div className="flex items-center gap-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#F59E0B" }}>Itens do Pedido</p>
+              <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
+              {!editing ? (
+                <button onClick={() => setEditing(true)}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all"
+                  style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
+                  onMouseEnter={e => Object.assign((e.currentTarget as HTMLElement).style, { color: '#818CF8', borderColor: '#6366F1' })}
+                  onMouseLeave={e => Object.assign((e.currentTarget as HTMLElement).style, { color: 'var(--text-muted)', borderColor: 'var(--border)' })}>
+                  <Edit2 size={11} /> Editar
+                </button>
+              ) : (
+                <div className="flex gap-1.5">
+                  <button onClick={() => { setEditing(false); setEditItems(items.map(i => ({ ...i }))); setEditPayment(order.payment_method); setEditNotes(order.notes ?? ''); }}
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-semibold"
+                    style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                    Cancelar
+                  </button>
+                  <button onClick={handleSaveEdit} disabled={savingEdit}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-white disabled:opacity-60"
+                    style={{ background: 'linear-gradient(135deg,#6366F1,#8B5CF6)' }}>
+                    {savingEdit ? <Loader2 size={11} className="animate-spin" /> : <CheckCircle2 size={11} />}
+                    Salvar
+                  </button>
+                </div>
+              )}
+            </div>
+
             <div className="mt-3 space-y-2">
               {loadingItems ? (
-                <div className="text-center py-4">
-                  <Loader2 size={20} className="animate-spin mx-auto" style={{ color: 'var(--text-muted)' }} />
-                </div>
-              ) : items.map((item) => (
-                <div key={item.id} className="flex items-center justify-between p-3 rounded-xl"
+                <div className="text-center py-4"><Loader2 size={20} className="animate-spin mx-auto" style={{ color: 'var(--text-muted)' }} /></div>
+              ) : displayItems.map((item) => (
+                <div key={item.id} className="flex items-center gap-3 p-3 rounded-xl"
                   style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
                   <div className="flex-1">
                     <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{item.product_name}</p>
-                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                      {formatCurrency(item.unit_price)} × {item.quantity}
-                    </p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{formatCurrency(item.unit_price)} × {item.quantity}</p>
                   </div>
-                  <span className="text-sm font-bold" style={{ color: '#10B981' }}>
-                    {formatCurrency(item.subtotal)}
-                  </span>
+                  {editing ? (
+                    <div className="flex items-center gap-1.5">
+                      <button onClick={() => updateEditQty(item.id, -1)}
+                        className="w-6 h-6 flex items-center justify-center rounded-lg text-xs font-bold"
+                        style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                        <Minus size={10} />
+                      </button>
+                      <span className="text-sm font-bold w-5 text-center" style={{ color: 'var(--text-primary)' }}>{item.quantity}</span>
+                      <button onClick={() => updateEditQty(item.id, 1)}
+                        className="w-6 h-6 flex items-center justify-center rounded-lg text-xs font-bold"
+                        style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                        <Plus size={10} />
+                      </button>
+                      <button onClick={() => removeEditItem(item.id)}
+                        className="w-6 h-6 flex items-center justify-center rounded-lg ml-1"
+                        style={{ background: 'rgba(239,68,68,0.08)', color: '#F87171' }}>
+                        <X size={10} />
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-sm font-bold" style={{ color: '#10B981' }}>
+                      {formatCurrency(item.unit_price * item.quantity)}
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
           </div>
 
-
-
           {/* Total */}
           <div className="rounded-xl p-4" style={{ background: isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.2)' }}>
             <div className="flex justify-between mb-2">
               <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Subtotal</span>
-              <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{formatCurrency(order.subtotal)}</span>
+              <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{formatCurrency(displaySubtotal)}</span>
             </div>
-            {order.delivery_fee > 0 && (
+            {(order.delivery_fee ?? 0) > 0 && (
               <div className="flex justify-between mb-2">
                 <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Taxa de Entrega</span>
                 <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{formatCurrency(order.delivery_fee)}</span>
@@ -543,31 +717,53 @@ function OrderDetailsModal({ order, onClose, onStatusChange }: { order: any; onC
             )}
             <div className="flex justify-between pt-3" style={{ borderTop: '1px solid rgba(99,102,241,0.2)' }}>
               <span className="text-base font-bold" style={{ color: '#6366F1' }}>Total</span>
-              <span className="text-lg font-bold" style={{ color: '#6366F1' }}>{formatCurrency(order.total)}</span>
+              <span className="text-lg font-bold" style={{ color: '#6366F1' }}>{formatCurrency(displayTotal)}</span>
             </div>
           </div>
 
           {/* Pagamento */}
           <div>
             <div className="flex items-center gap-3"><p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#10B981" }}>Pagamento</p><div className="flex-1 h-px" style={{ background: "var(--border)" }} /></div>
-            <div className="mt-3 p-3 rounded-xl inline-flex items-center gap-2"
-              style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
-              <DollarSign size={14} style={{ color: '#10B981' }} />
-              <span className="text-sm font-semibold capitalize" style={{ color: 'var(--text-primary)' }}>
-                {order.payment_method?.replace('_', ' ')}
-              </span>
-            </div>
+            {editing ? (
+              <div className="mt-3">
+                <select value={editPayment} onChange={e => setEditPayment(e.target.value)}
+                  className="w-full rounded-xl text-sm outline-none"
+                  style={{ padding: '0.6rem 0.875rem', background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}
+                  onFocus={e => (e.currentTarget.style.borderColor = '#10B981')}
+                  onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')}>
+                  {Object.entries(PAYMENT_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
+              </div>
+            ) : (
+              <div className="mt-3 p-3 rounded-xl inline-flex items-center gap-2"
+                style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
+                <PayIcon size={14} style={{ color: '#10B981' }} />
+                <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                  {PAYMENT_LABELS[order.payment_method] ?? order.payment_method}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Observações */}
-          {order.notes && (
-            <div>
-              <div className="flex items-center gap-3"><p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#6B7280" }}>Observações</p><div className="flex-1 h-px" style={{ background: "var(--border)" }} /></div>
+          <div>
+            <div className="flex items-center gap-3"><p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#6B7280" }}>Observações</p><div className="flex-1 h-px" style={{ background: "var(--border)" }} /></div>
+            {editing ? (
+              <textarea value={editNotes} onChange={e => setEditNotes(e.target.value)}
+                className="mt-3 w-full rounded-xl text-sm outline-none resize-none"
+                style={{ padding: '0.6rem 0.875rem', background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)', minHeight: 70 }}
+                placeholder="Observações do pedido..."
+                onFocus={e => (e.currentTarget.style.borderColor = '#6B7280')}
+                onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')} />
+            ) : order.notes ? (
               <div className="mt-3 p-4 rounded-xl" style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
                 <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{order.notes}</p>
               </div>
-            </div>
-          )}
+            ) : (
+              <p className="mt-2 text-xs italic" style={{ color: 'var(--text-muted)' }}>Nenhuma observação</p>
+            )}
+          </div>
+
         </div>
       </ModalShell>
     </ModalBackdrop>
@@ -753,9 +949,17 @@ export function OrdersView() {
                     </td>
                     <td className="px-5 py-4"><StatusBadge status={order.status} /></td>
                     <td className="px-5 py-4">
-                      <span className="font-bold" style={{ color: 'var(--text-primary)' }}>
-                        {formatCurrency(order.total)}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className="font-bold" style={{ color: 'var(--text-primary)' }}>
+                          {formatCurrency(order.total)}
+                        </span>
+                        {(order.type === 'table' || order.order_type === 'table') && order.payment_status === 'unpaid' && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold w-max"
+                            style={{ background: 'rgba(245,158,11,0.15)', color: '#F59E0B' }}>
+                            <span className="w-1 h-1 rounded-full bg-amber-400" />A pagar
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-5 py-4">
                       <div style={{ color: 'var(--text-secondary)' }}>

@@ -31,6 +31,7 @@ interface Theme {
   font_family: string;
   border_radius: string;
   show_cover: boolean;
+  show_stock_quantity: boolean;
 }
 
 interface Category { id: string; name: string; sort_order: number }
@@ -38,6 +39,7 @@ interface Product {
   id: string; category_id: string | null; name: string;
   description: string | null; price: number;
   promotional_price: number | null; available: boolean;
+  current_quantity: number | null;
   product_images: { url: string; is_primary: boolean }[];
 }
 interface CartItem { product: Product; qty: number }
@@ -52,6 +54,7 @@ const DEFAULT_THEME: Theme = {
   font_family: 'DM Sans',
   border_radius: 'rounded',
   show_cover: true,
+  show_stock_quantity: false,
 };
 
 /* ─── Helpers ────────────────────────────────────────── */
@@ -434,6 +437,12 @@ export default function CatalogPage() {
                         <div className="prod-body">
                           <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 4, lineHeight: 1.3 }}>{product.name}</p>
                           {product.description && <p style={{ fontSize: 11, color: 'rgba(0,0,0,.4)', marginBottom: 10, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{product.description}</p>}
+                          {/* Badge de quantidade disponível — controlado pelo lojista */}
+                          {theme.show_stock_quantity && product.current_quantity !== null && (
+                            <p style={{ fontSize: 10, fontWeight: 600, marginBottom: 6, color: product.current_quantity <= 3 ? '#EF4444' : 'rgba(0,0,0,.35)' }}>
+                              {product.current_quantity <= 0 ? '⚠ Indisponível' : `${product.current_quantity} disponíve${product.current_quantity === 1 ? 'l' : 'is'}`}
+                            </p>
+                          )}
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
                             <div>
                               {hasPromo && <p style={{ fontSize: 10, color: 'rgba(0,0,0,.3)', textDecoration: 'line-through', lineHeight: 1 }}>{fmt(product.price)}</p>}

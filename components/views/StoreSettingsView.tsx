@@ -235,7 +235,7 @@ export function StoreSettingsView() {
     primary_color: '#6366F1', secondary_color: '#8B5CF6', accent_color: '#10B981',
     background_color: '#FFFFFF', surface_color: '#F9FAFB', text_color: '#111827',
     font_family: 'Inter', border_radius: 'rounded', card_style: 'shadow',
-    header_style: 'cover', show_cover: true,
+    header_style: 'cover', show_cover: true, show_stock_quantity: false,
   });
 
   // ── Load ────────────────────────────────────────────────────────────────────
@@ -738,6 +738,13 @@ export function StoreSettingsView() {
                     <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Exibir imagem de capa no topo</p>
                   </div>
                   <Toggle value={theme.show_cover} onChange={v => st('show_cover')(v)} />
+                </div>
+                <div className="flex items-center justify-between pt-2" style={{ borderTop: '1px solid var(--border-soft)' }}>
+                  <div>
+                    <p className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>Exibir quantidade disponível</p>
+                    <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Mostra estoque restante de cada produto no cardápio</p>
+                  </div>
+                  <Toggle value={(theme as any).show_stock_quantity} onChange={v => st('show_stock_quantity')(v)} />
                 </div>
               </div>
             </Card>

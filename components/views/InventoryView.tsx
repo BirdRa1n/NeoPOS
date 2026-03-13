@@ -417,76 +417,6 @@ function ProductMovementModal({ productStock, storeId, onClose, onSuccess }: {
   );
 }
 
-/* ─── Stock visibility banner ─────────────────────────────────────────────── */
-
-function StockVisibilityBanner({ storeId }: { storeId: string }) {
-  const isDark = useIsDark();
-  const [showStock, setShowStock] = useState<boolean | null>(null);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    supabase.schema('catalog').from('store_theme')
-      .select('show_stock_quantity')
-      .eq('store_id', storeId)
-      .maybeSingle()
-      .then(({ data }) => {
-        setShowStock(data?.show_stock_quantity ?? false);
-      });
-  }, [storeId]);
-
-  const toggle = async () => {
-    if (showStock === null) return;
-    setSaving(true);
-    const next = !showStock;
-    try {
-      const { data: existing } = await supabase.schema('catalog').from('store_theme')
-        .select('id').eq('store_id', storeId).maybeSingle();
-      if (existing) {
-        await supabase.schema('catalog').from('store_theme')
-          .update({ show_stock_quantity: next }).eq('store_id', storeId);
-      } else {
-        await supabase.schema('catalog').from('store_theme')
-          .insert({ store_id: storeId, show_stock_quantity: next });
-      }
-      setShowStock(next);
-    } catch (err: any) { alert(err.message); }
-    finally { setSaving(false); }
-  };
-
-  if (showStock === null) return null;
-
-  return (
-    <div className="flex items-center justify-between px-4 py-3 rounded-2xl"
-      style={{
-        background: isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.05)',
-        border: `1px solid ${isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.15)'}`,
-      }}>
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-          style={{ background: isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.1)' }}>
-          {showStock
-            ? <Eye size={15} style={{ color: '#818CF8' }} />
-            : <EyeOff size={15} style={{ color: '#818CF8' }} />}
-        </div>
-        <div>
-          <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-            Exibir quantidade disponível no cardápio
-          </p>
-          <p className="text-[11px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
-            {showStock
-              ? 'Clientes veem quantas unidades restam de cada produto'
-              : 'Quantidade oculta para os clientes no cardápio'}
-          </p>
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
-        {saving && <RefreshCw size={13} className="animate-spin" style={{ color: 'var(--text-muted)' }} />}
-        <Toggle value={showStock} onChange={toggle} />
-      </div>
-    </div>
-  );
-}
-
 /* ─── Main component ─────────────────────────────────────────────────────── */
 
 type SortKey = 'name' | 'current_quantity' | 'stock_value';
@@ -584,11 +514,6 @@ export function InventoryView() {
           </button>
         ))}
       </div>
-
-      {/* Stock visibility banner — só na aba de produtos */}
-      {isProducts && store && (
-        <StockVisibilityBanner storeId={store.id} />
-      )}
 
       {/* Stats strip */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
