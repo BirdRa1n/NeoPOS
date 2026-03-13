@@ -14,7 +14,7 @@ export function useProducts() {
     const { data } = await supabase
       .schema('catalog')
       .from('products')
-      .select('*,product_images(*)')
+      .select('*,product_images(*), categories(*)')
       .eq('store_id', store.id)
       .order('sort_order');
 

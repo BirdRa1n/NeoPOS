@@ -42,366 +42,534 @@ function useIsDark(): boolean {
 
 
 
-// ─── Order modal ──────────────────────────────────────────────────────────────
-function OrderModal({ storeId, onClose, onSuccess }: { storeId: string; onClose: () => void; onSuccess: () => void }) {
+// ─── Order modal — wizard 2 etapas ───────────────────────────────────────────
+function OrderModal({ storeId, onClose, onSuccess }: {
+  storeId: string; onClose: () => void; onSuccess: () => void;
+}) {
   const isDark = useIsDark();
+  const [step, setStep] = useState<1 | 2>(1);
   const [saving, setSaving] = useState(false);
+  const [catFilter, setCatFilter] = useState<string>('all');
+  const [search, setSearch] = useState('');
+
   const { customers = [] } = useCustomers() as any;
   const { products = [] } = useProducts() as any;
   const { zones = [] } = useDeliveryZones() as any;
   const { drivers = [] } = useDeliveryDrivers() as any;
 
-  // Alerta de estoque baixo
-  const [lowStockItems, setLowStockItems] = useState<string[]>([]);
+  const [lowIds, setLowIds] = useState<Set<string>>(new Set());
   useEffect(() => {
     supabase.schema('inventory').from('product_stock_summary')
-      .select('name, below_minimum')
-      .eq('store_id', storeId)
-      .eq('below_minimum', true)
-      .then(({ data }) => {
-        if (data) setLowStockItems(data.map((d: any) => d.name));
-      });
+      .select('product_id').eq('store_id', storeId).eq('below_minimum', true)
+      .then(({ data }) => { if (data) setLowIds(new Set(data.map((d: any) => d.product_id))); });
   }, [storeId]);
 
   const [form, setForm] = useState({
-    order_type: 'delivery',
-    customer_id: '',
-    customer_name: '',
-    customer_phone: '',
-    customer_address: '',
-    delivery_zone_id: '',
-    driver_id: '',
-    table_number: '',
-    payment_method: 'cash',
-    notes: '',
+    order_type: 'delivery', customer_id: '', customer_name: '',
+    customer_phone: '', customer_address: '', delivery_zone_id: '',
+    driver_id: '', table_number: '', payment_method: 'cash', notes: '',
   });
-  const [items, setItems] = useState<{ product_id: string; quantity: number; price: number }[]>([]);
-  const [searchProduct, setSearchProduct] = useState('');
+  const [items, setItems] = useState<{ product_id: string; qty: number; price: number }[]>([]);
 
-  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
-    setForm(f => ({ ...f, [k]: e.target.value }));
+  const set = (k: keyof typeof form) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+      setForm(f => ({ ...f, [k]: e.target.value }));
 
-  const addItem = (product: any) => {
-    const exists = items.find(i => i.product_id === product.id);
-    if (exists) {
-      setItems(items.map(i => i.product_id === product.id ? { ...i, quantity: i.quantity + 1 } : i));
-    } else {
-      setItems([...items, { product_id: product.id, quantity: 1, price: product.price }]);
-    }
-    setSearchProduct('');
+  const addItem = (p: any) => {
+    const price = p.promotional_price ?? p.price;
+    setItems(prev => {
+      const ex = prev.find(i => i.product_id === p.id);
+      return ex ? prev.map(i => i.product_id === p.id ? { ...i, qty: i.qty + 1 } : i)
+        : [...prev, { product_id: p.id, qty: 1, price }];
+    });
+  };
+  const remItem = (id: string) => setItems(prev => prev.filter(i => i.product_id !== id));
+  const setQty = (id: string, q: number) => {
+    if (q < 1) return remItem(id);
+    setItems(prev => prev.map(i => i.product_id === id ? { ...i, qty: q } : i));
   };
 
-  const removeItem = (productId: string) => {
-    setItems(items.filter(i => i.product_id !== productId));
-  };
+  // Categorias únicas dos produtos disponíveis
+  const categoryMap = products.reduce((m: Map<string, string>, p: any) => {
+    if (p.categories?.id && p.categories?.name) m.set(p.categories.id, p.categories.name);
+    return m;
+  }, new Map<string, string>());
+  const categories: { id: string; name: string }[] = [];
+  categoryMap.forEach((name: string, id: string) => categories.push({ id, name }));
 
-  const updateQuantity = (productId: string, quantity: number) => {
-    if (quantity < 1) return removeItem(productId);
-    setItems(items.map(i => i.product_id === productId ? { ...i, quantity } : i));
-  };
+  const visibleProds = products.filter((p: any) => {
+    if (p.available === false) return false;
+    if (catFilter !== 'all' && p.categories?.id !== catFilter) return false;
+    if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
 
-  const selectedCustomer = customers.find((c: any) => c.id === form.customer_id);
   const selectedZone = zones.find((z: any) => z.id === form.delivery_zone_id);
-  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const deliveryFee = form.order_type === 'delivery' ? (selectedZone?.delivery_fee || 0) : 0;
+  const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0);
+  const deliveryFee = form.order_type === 'delivery' ? (selectedZone?.delivery_fee ?? 0) : 0;
   const total = subtotal + deliveryFee;
-
-  const filteredProducts = products.filter((p: any) =>
-    p.name.toLowerCase().includes(searchProduct.toLowerCase()) &&
-    !items.find(i => i.product_id === p.id)
-  );
+  const totalQty = items.reduce((s, i) => s + i.qty, 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (items.length === 0) return alert('Adicione pelo menos um produto');
-
-    // Validação: delivery precisa de cliente
-    if (form.order_type === 'delivery' && !form.customer_id && !form.customer_name) {
+    if (!items.length) return alert('Adicione pelo menos um produto');
+    if (form.order_type === 'delivery' && !form.customer_id && !form.customer_name)
       return alert('Informe o cliente para pedidos de entrega');
-    }
-
     setSaving(true);
     try {
-      let customerId = form.customer_id;
-
-      // Se não tem customer_id mas tem nome (novo cliente), criar o cliente
-      if (!customerId && form.customer_name) {
-        const { data: newCustomer, error: customerError } = await supabase
-          .schema('core')
-          .from('customers')
+      let cid = form.customer_id;
+      if (!cid && form.customer_name) {
+        const { data: nc, error: ce } = await supabase.schema('core').from('customers')
           .insert({
-            store_id: storeId,
-            name: form.customer_name,
-            phone: form.customer_phone || null,
-            address: form.order_type === 'delivery' ? form.customer_address : null,
+            store_id: storeId, name: form.customer_name, phone: form.customer_phone || null,
+            address: form.order_type === 'delivery' ? form.customer_address : null
           })
-          .select()
-          .single();
-
-        if (customerError) throw customerError;
-        customerId = newCustomer.id;
+          .select().single();
+        if (ce) throw ce;
+        cid = nc.id;
       }
-
-      const orderData: any = {
-        store_id: storeId,
-        type: form.order_type,
-        customer_id: customerId || null,
-        status: 'pending',
-        payment_method: form.payment_method,
-        subtotal,
-        total,
-        notes: form.notes || null,
+      const status0 = form.order_type === 'delivery' ? 'pending' : 'confirmed';
+      const od: any = {
+        store_id: storeId, type: form.order_type, customer_id: cid || null,
+        status: status0, payment_method: form.payment_method, subtotal, total, notes: form.notes || null
       };
-
       if (form.order_type === 'delivery') {
-        orderData.delivery_address = form.customer_address;
-        orderData.delivery_zone_id = form.delivery_zone_id || null;
-        orderData.driver_id = form.driver_id || null;
-        orderData.delivery_fee = deliveryFee;
+        od.delivery_address = form.customer_address;
+        od.delivery_zone_id = form.delivery_zone_id || null;
+        od.driver_id = form.driver_id || null;
+        od.delivery_fee = deliveryFee;
       } else if (form.order_type === 'table' && form.table_number) {
-        orderData.table_number = form.table_number;
+        od.table_number = form.table_number;
       }
-
-      const { data: order, error: orderError } = await supabase
-        .schema('orders')
-        .from('orders')
-        .insert(orderData)
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      const orderItems = items.map(item => ({
-        order_id: order.id,
-        product_id: item.product_id,
-        product_name: products.find((p: any) => p.id === item.product_id)?.name || 'Produto',
-        quantity: item.quantity,
-        unit_price: item.price,
-        subtotal: item.price * item.quantity,
-      }));
-
-      const { error: itemsError } = await supabase
-        .schema('orders')
-        .from('order_items')
-        .insert(orderItems);
-
-      if (itemsError) throw itemsError;
-
+      const { data: order, error: oe } = await supabase.schema('orders').from('orders').insert(od).select().single();
+      if (oe) throw oe;
+      const { error: ie } = await supabase.schema('orders').from('order_items').insert(
+        items.map(i => ({
+          order_id: order.id, product_id: i.product_id,
+          product_name: products.find((p: any) => p.id === i.product_id)?.name ?? 'Produto',
+          quantity: i.qty, unit_price: i.price, subtotal: i.price * i.qty,
+        }))
+      );
+      if (ie) throw ie;
       onSuccess();
     } catch (err: any) { alert(err.message ?? 'Erro ao criar pedido'); }
     finally { setSaving(false); }
   };
 
-  return (
+  const selStyle = {
+    padding: '0.6rem 0.875rem', background: 'var(--input-bg)',
+    border: '1px solid var(--input-border)', color: 'var(--text-primary)',
+  };
+
+  // ── Shared header ────────────────────────────────────────────────────────────
+  const Header = () => (
+    <div className="flex items-center justify-between px-5 py-4"
+      style={{ borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+          style={{ background: 'rgba(99,102,241,0.12)', flexShrink: 0 }}>
+          <ShoppingCart size={15} style={{ color: '#6366F1' }} />
+        </div>
+        <div>
+          <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Novo Pedido</p>
+          <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+            {step === 1 ? 'Passo 1 — Selecionar produtos' : 'Passo 2 — Dados do pedido'}
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <div className="flex gap-1.5 items-center">
+          {([1, 2] as const).map(s => (
+            <div key={s} style={{
+              height: 6, borderRadius: 999, transition: 'all .25s',
+              width: s === step ? 22 : 8,
+              background: s === step ? '#6366F1' : s < step ? '#10B981' : 'var(--border)',
+            }} />
+          ))}
+        </div>
+        <button onClick={onClose}
+          className="w-7 h-7 flex items-center justify-center rounded-lg"
+          style={{ color: 'var(--text-muted)' }}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--surface-hover)'}
+          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
+          <X size={15} />
+        </button>
+      </div>
+    </div>
+  );
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // ETAPA 1 — grade de produtos com categorias e scroll
+  // ────────────────────────────────────────────────────────────────────────────
+  if (step === 1) return (
     <ModalBackdrop onClose={onClose}>
-      <ModalShell maxW="max-w-3xl">
-        <ModalHeader title="Novo Pedido" subtitle="Registre um novo pedido" icon={ShoppingCart} onClose={onClose} />
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-          <div className="p-6 space-y-5">
-            {/* Alerta de estoque baixo — não-bloqueante */}
-            {lowStockItems.length > 0 && (
-              <div className="flex items-start gap-3 p-3 rounded-xl"
-                style={{
-                  background: isDark ? 'rgba(245,158,11,0.08)' : 'rgba(245,158,11,0.06)',
-                  border: `1px solid ${isDark ? 'rgba(245,158,11,0.25)' : 'rgba(245,158,11,0.2)'}`,
-                }}>
-                <AlertTriangle size={16} style={{ color: '#F59E0B', flexShrink: 0, marginTop: 1 }} />
-                <div>
-                  <p className="text-xs font-bold" style={{ color: isDark ? '#FCD34D' : '#92400E' }}>
-                    Atenção: estoque baixo
-                  </p>
-                  <p className="text-[11px] mt-0.5" style={{ color: isDark ? 'rgba(252,211,77,0.8)' : '#B45309' }}>
-                    Verifique a disponibilidade antes de confirmar: {lowStockItems.slice(0, 4).join(', ')}{lowStockItems.length > 4 ? ` e mais ${lowStockItems.length - 4}...` : ''}
-                  </p>
-                </div>
-              </div>
-            )}
-            <div className="flex items-center gap-3"><p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#6366F1" }}>Tipo de Pedido</p><div className="flex-1 h-px" style={{ background: "var(--border)" }} /></div>
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { value: 'delivery', label: 'Entrega', icon: Truck },
-                { value: 'pickup', label: 'Retirada', icon: Package },
-                { value: 'table', label: 'No Local', icon: UtensilsCrossed },
-              ].map(({ value, label, icon: Icon }) => (
-                <button key={value} type="button" onClick={() => setForm(f => ({ ...f, order_type: value }))}
-                  className="flex flex-col items-center gap-2 py-3 rounded-xl transition-all"
+      <div style={{
+        position: 'relative', display: 'flex', flexDirection: 'column',
+        background: 'var(--surface)', border: '1px solid var(--border)',
+        borderRadius: 20, boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
+        width: '100%', maxWidth: 680, height: '90vh', maxHeight: 800,
+        overflow: 'hidden',
+      }}>
+        <Header />
+
+        {/* Barra de busca + chips de categoria — fixa */}
+        <div style={{ flexShrink: 0, padding: '12px 16px 10px', borderBottom: '1px solid var(--border)' }}>
+          {/* Busca */}
+          <div style={{ position: 'relative', marginBottom: categories.length ? 10 : 0 }}>
+            <Search size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+            <input
+              value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar produto..."
+              style={{
+                width: '100%', paddingLeft: 36, paddingRight: 14, paddingTop: 8, paddingBottom: 8,
+                background: 'var(--input-bg)', border: '1px solid var(--input-border)',
+                borderRadius: 12, fontSize: 13, color: 'var(--text-primary)', outline: 'none',
+                boxSizing: 'border-box',
+              }}
+              onFocus={e => (e.currentTarget.style.borderColor = '#6366F1')}
+              onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')}
+            />
+          </div>
+          {/* Chips de categoria */}
+          {categories.length > 0 && (
+            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
+              {([{ id: 'all', name: 'Todos' }, ...categories] as { id: string; name: string }[]).map(cat => (
+                <button key={cat.id} type="button" onClick={() => setCatFilter(cat.id)}
                   style={{
-                    background: form.order_type === value ? (isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.12)') : 'var(--input-bg)',
-                    border: `1px solid ${form.order_type === value ? '#6366F1' : 'var(--input-border)'}`,
-                    color: form.order_type === value ? '#818CF8' : 'var(--text-muted)',
+                    flexShrink: 0, padding: '4px 12px', borderRadius: 999, fontSize: 12,
+                    fontWeight: 600, cursor: 'pointer', transition: 'all .15s',
+                    background: catFilter === cat.id ? '#6366F1' : 'var(--input-bg)',
+                    color: catFilter === cat.id ? '#fff' : 'var(--text-muted)',
+                    border: `1px solid ${catFilter === cat.id ? '#6366F1' : 'var(--input-border)'}`,
                   }}>
-                  <Icon size={20} />
-                  <span className="text-xs font-semibold">{label}</span>
+                  {cat.name}
                 </button>
               ))}
             </div>
+          )}
+        </div>
 
-            <div style={{ height: 1, background: 'var(--border)' }} />
-            <div className="flex items-center gap-3"><p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#8B5CF6" }}>Cliente</p><div className="flex-1 h-px" style={{ background: "var(--border)" }} /></div>
-            <div className="grid grid-cols-2 gap-4">
+        {/* Grade de produtos — área de scroll */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
+          {visibleProds.length === 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 8 }}>
+              <Package size={30} style={{ color: 'var(--text-muted)', opacity: 0.2 }} />
+              <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Nenhum produto encontrado</p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12 }}>
+              {visibleProds.map((p: any) => {
+                const cart = items.find(i => i.product_id === p.id);
+                const img = p.product_images?.find((i: any) => i.is_primary)?.url ?? p.product_images?.[0]?.url;
+                const price = p.promotional_price ?? p.price;
+                return (
+                  <div key={p.id} style={{
+                    background: 'var(--input-bg)',
+                    border: `1.5px solid ${cart ? '#6366F1' : 'var(--border)'}`,
+                    borderRadius: 14,
+                    boxShadow: cart ? '0 0 0 3px rgba(99,102,241,0.12)' : 'none',
+                    transition: 'border-color .15s, box-shadow .15s',
+                    overflow: 'hidden',
+                  }}>
+                    {/* Foto */}
+                    <div style={{ position: 'relative', aspectRatio: '4/3', background: 'var(--surface)' }}>
+                      {img
+                        ? <img src={img} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                        : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Package size={24} style={{ opacity: 0.18, color: 'var(--text-muted)' }} />
+                        </div>
+                      }
+                      {p.promotional_price && (
+                        <span style={{ position: 'absolute', top: 6, left: 6, background: '#EF4444', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 6 }}>PROMO</span>
+                      )}
+                      {lowIds.has(p.id) && (
+                        <span style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(245,158,11,0.9)', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 6 }}>Baixo</span>
+                      )}
+                    </div>
+                    {/* Info */}
+                    <div style={{ padding: '8px 10px' }}>
+                      <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6, lineHeight: 1.3 }}>{p.name}</p>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
+                        <div>
+                          {p.promotional_price && <p style={{ fontSize: 10, textDecoration: 'line-through', color: 'var(--text-muted)', lineHeight: 1 }}>{formatCurrency(p.price)}</p>}
+                          <p style={{ fontSize: 13, fontWeight: 700, color: '#6366F1' }}>{formatCurrency(price)}</p>
+                        </div>
+                        {cart ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <button type="button" onClick={() => setQty(p.id, cart.qty - 1)}
+                              style={{ width: 24, height: 24, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                              <Minus size={9} />
+                            </button>
+                            <span style={{ fontSize: 12, fontWeight: 700, minWidth: 16, textAlign: 'center', color: 'var(--text-primary)' }}>{cart.qty}</span>
+                            <button type="button" onClick={() => setQty(p.id, cart.qty + 1)}
+                              style={{ width: 24, height: 24, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#6366F1', color: '#fff', border: 'none', cursor: 'pointer' }}>
+                              <Plus size={9} />
+                            </button>
+                          </div>
+                        ) : (
+                          <button type="button" onClick={() => addItem(p)}
+                            style={{ width: 28, height: 28, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#6366F1', color: '#fff', border: 'none', cursor: 'pointer', flexShrink: 0 }}>
+                            <Plus size={13} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Footer etapa 1 */}
+        <div style={{ flexShrink: 0, padding: '12px 16px', borderTop: '1px solid var(--border)' }}>
+          {items.length === 0 ? (
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>Selecione pelo menos um produto para continuar</p>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 1 }}>{totalQty} item{totalQty !== 1 ? 's' : ''} selecionado{totalQty !== 1 ? 's' : ''}</p>
+                <p style={{ fontSize: 16, fontWeight: 700, color: '#6366F1' }}>{formatCurrency(subtotal)}</p>
+              </div>
+              <button type="button" onClick={() => setStep(2)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6, padding: '10px 20px',
+                  borderRadius: 12, fontSize: 13, fontWeight: 700, color: '#fff',
+                  background: 'linear-gradient(135deg,#6366F1,#8B5CF6)',
+                  boxShadow: '0 4px 14px rgba(99,102,241,0.3)', border: 'none', cursor: 'pointer',
+                }}>
+                Continuar <ArrowUpRight size={14} />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </ModalBackdrop>
+  );
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // ETAPA 2 — dados do pedido com scroll e botão voltar
+  // ────────────────────────────────────────────────────────────────────────────
+  return (
+    <ModalBackdrop onClose={onClose}>
+      <div style={{
+        position: 'relative', display: 'flex', flexDirection: 'column',
+        background: 'var(--surface)', border: '1px solid var(--border)',
+        borderRadius: 20, boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
+        width: '100%', maxWidth: 600, height: '90vh', maxHeight: 800,
+        overflow: 'hidden',
+      }}>
+        <Header />
+
+        {/* Corpo com scroll */}
+        <form onSubmit={handleSubmit} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 0' }}>
+
+            {/* Resumo do carrinho — card clicável para voltar */}
+            <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(99,102,241,0.25)', marginBottom: 20 }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '8px 14px', background: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.06)',
+                borderBottom: '1px solid rgba(99,102,241,0.15)',
+              }}>
+                <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#818CF8' }}>
+                  {totalQty} item{totalQty !== 1 ? 's' : ''} · {formatCurrency(subtotal)}
+                </span>
+                <button type="button" onClick={() => setStep(1)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, color: '#818CF8', background: 'rgba(99,102,241,0.12)', border: 'none', borderRadius: 8, padding: '4px 10px', cursor: 'pointer' }}>
+                  <Edit2 size={10} /> Editar produtos
+                </button>
+              </div>
+              <div style={{ background: 'var(--input-bg)', padding: '8px 14px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {items.map(item => {
+                  const prod = products.find((p: any) => p.id === item.product_id);
+                  return (
+                    <div key={item.product_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                        <span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>{item.qty}×</span> {prod?.name}
+                      </span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{formatCurrency(item.price * item.qty)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Tipo de pedido */}
+            <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#6366F1', marginBottom: 10 }}>Tipo de Pedido</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 20 }}>
+              {([
+                { value: 'delivery', label: 'Entrega', icon: Truck },
+                { value: 'pickup', label: 'Retirada', icon: Package },
+                { value: 'table', label: 'No Local', icon: UtensilsCrossed },
+              ] as const).map(({ value, label, icon: Icon }) => {
+                const active = form.order_type === value;
+                return (
+                  <button key={value} type="button" onClick={() => setForm(f => ({ ...f, order_type: value }))}
+                    style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '10px 0',
+                      borderRadius: 12, cursor: 'pointer', transition: 'all .15s',
+                      background: active ? (isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.1)') : 'var(--input-bg)',
+                      border: `1px solid ${active ? '#6366F1' : 'var(--input-border)'}`,
+                      color: active ? '#818CF8' : 'var(--text-muted)',
+                    }}>
+                    <Icon size={18} />
+                    <span style={{ fontSize: 11, fontWeight: 600 }}>{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Cliente */}
+            <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#8B5CF6', marginBottom: 10 }}>Cliente</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
               <FormField label="Cliente Cadastrado">
                 <select value={form.customer_id} onChange={set('customer_id')}
-                  className="w-full rounded-xl text-sm outline-none transition-all"
-                  style={{ padding: '0.6rem 0.875rem', background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}
+                  className="w-full rounded-xl text-sm outline-none" style={selStyle}
                   onFocus={e => (e.currentTarget.style.borderColor = '#8B5CF6')}
                   onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')}>
                   <option value="">Novo cliente</option>
                   {customers.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </FormField>
-              <FormField label="Nome" required={form.order_type === 'delivery' && !form.customer_id}>
-                <Input icon={User} value={form.customer_name} onChange={set('customer_name')} placeholder="Nome do cliente" disabled={!!form.customer_id} required={form.order_type === 'delivery' && !form.customer_id} />
-              </FormField>
+              {!form.customer_id && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <FormField label="Nome" required={form.order_type === 'delivery'}>
+                    <Input icon={User} value={form.customer_name} onChange={set('customer_name')} placeholder="Nome"
+                      required={form.order_type === 'delivery' && !form.customer_id} />
+                  </FormField>
+                  <FormField label="Telefone">
+                    <Input icon={Phone} value={form.customer_phone} onChange={set('customer_phone')} placeholder="(00) 00000-0000" />
+                  </FormField>
+                </div>
+              )}
             </div>
-            <FormField label="Telefone">
-              <Input icon={Phone} value={form.customer_phone} onChange={set('customer_phone')} placeholder="(00) 00000-0000" disabled={!!form.customer_id} />
-            </FormField>
 
+            {/* Campos por tipo */}
             {form.order_type === 'delivery' && (
-              <>
-                <div className="grid grid-cols-2 gap-4">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+                <FormField label="Endereço" required>
+                  <Input icon={MapPin} value={form.customer_address} onChange={set('customer_address')} placeholder="Rua, número, complemento" required />
+                </FormField>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   <FormField label="Zona de Entrega">
                     <select value={form.delivery_zone_id} onChange={set('delivery_zone_id')}
-                      className="w-full rounded-xl text-sm outline-none transition-all"
-                      style={{ padding: '0.6rem 0.875rem', background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}
+                      className="w-full rounded-xl text-sm outline-none" style={selStyle}
                       onFocus={e => (e.currentTarget.style.borderColor = '#8B5CF6')}
                       onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')}>
                       <option value="">Selecione</option>
                       {zones.filter((z: any) => z.active).map((z: any) => (
-                        <option key={z.id} value={z.id}>{z.neighborhood} - {formatCurrency(z.delivery_fee)}</option>
+                        <option key={z.id} value={z.id}>{z.neighborhood} — {formatCurrency(z.delivery_fee)}</option>
                       ))}
                     </select>
                   </FormField>
                   <FormField label="Entregador">
                     <select value={form.driver_id} onChange={set('driver_id')}
-                      className="w-full rounded-xl text-sm outline-none transition-all"
-                      style={{ padding: '0.6rem 0.875rem', background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}
+                      className="w-full rounded-xl text-sm outline-none" style={selStyle}
                       onFocus={e => (e.currentTarget.style.borderColor = '#8B5CF6')}
                       onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')}>
-                      <option value="">Atribuir depois</option>
+                      <option value="">Depois</option>
                       {drivers.filter((d: any) => d.active).map((d: any) => (
                         <option key={d.id} value={d.id}>{d.name}</option>
                       ))}
                     </select>
                   </FormField>
                 </div>
-                <FormField label="Endereço de Entrega" required>
-                  <Input icon={MapPin} value={form.customer_address} onChange={set('customer_address')} placeholder="Rua, número, complemento" required />
-                </FormField>
-              </>
+              </div>
             )}
-
             {form.order_type === 'table' && (
-              <FormField label="Número da Mesa">
-                <Input value={form.table_number} onChange={set('table_number')} placeholder="Ex: 5" />
-              </FormField>
-            )}
-
-            <div style={{ height: 1, background: 'var(--border)' }} />
-            <div className="flex items-center gap-3"><p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#10B981" }}>Produtos</p><div className="flex-1 h-px" style={{ background: "var(--border)" }} /></div>
-
-            <FormField label="Buscar Produto">
-              <div className="relative">
-                <Input icon={Search} value={searchProduct} onChange={e => setSearchProduct(e.target.value)} placeholder="Digite para buscar..." />
-                {searchProduct && filteredProducts.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-1 rounded-xl overflow-hidden z-10"
-                    style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--surface-box)', maxHeight: '200px', overflowY: 'auto' }}>
-                    {filteredProducts.slice(0, 5).map((p: any) => (
-                      <button key={p.id} type="button" onClick={() => addItem(p)}
-                        className="w-full flex items-center justify-between px-4 py-2.5 text-left transition-all"
-                        style={{ borderBottom: '1px solid var(--border-soft)' }}
-                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--surface-hover)'}
-                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
-                        <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{p.name}</span>
-                        <span className="text-sm font-bold" style={{ color: '#10B981' }}>{formatCurrency(p.price)}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </FormField>
-
-            {items.length > 0 && (
-              <div className="space-y-2">
-                {items.map(item => {
-                  const product = products.find((p: any) => p.id === item.product_id);
-                  return (
-                    <div key={item.product_id} className="flex items-center gap-3 p-3 rounded-xl"
-                      style={{ background: isDark ? 'rgba(16,185,129,0.06)' : 'rgba(16,185,129,0.04)', border: '1px solid var(--border-soft)' }}>
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{product?.name}</p>
-                        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{formatCurrency(item.price)} × {item.quantity}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button type="button" onClick={() => updateQuantity(item.product_id, item.quantity - 1)}
-                          className="w-7 h-7 flex items-center justify-center rounded-lg transition-all"
-                          style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-                          <Minus size={12} />
-                        </button>
-                        <span className="text-sm font-bold w-8 text-center" style={{ color: 'var(--text-primary)' }}>{item.quantity}</span>
-                        <button type="button" onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
-                          className="w-7 h-7 flex items-center justify-center rounded-lg transition-all"
-                          style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-                          <Plus size={12} />
-                        </button>
-                      </div>
-                      <span className="text-sm font-bold w-20 text-right" style={{ color: '#10B981' }}>
-                        {formatCurrency(item.price * item.quantity)}
-                      </span>
-                      <button type="button" onClick={() => removeItem(item.product_id)}
-                        className="w-7 h-7 flex items-center justify-center rounded-lg transition-all"
-                        style={{ background: isDark ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.06)', color: '#F87171' }}>
-                        <X size={12} />
-                      </button>
-                    </div>
-                  );
-                })}
+              <div style={{ marginBottom: 20 }}>
+                <FormField label="Número da Mesa">
+                  <Input value={form.table_number} onChange={set('table_number')} placeholder="Ex: 5" />
+                </FormField>
               </div>
             )}
 
-            <div style={{ height: 1, background: 'var(--border)' }} />
-            <div className="flex items-center gap-3"><p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#F59E0B" }}>Pagamento</p><div className="flex-1 h-px" style={{ background: "var(--border)" }} /></div>
-            <FormField label="Forma de Pagamento" required>
-              <select value={form.payment_method} onChange={set('payment_method')}
-                className="w-full rounded-xl text-sm outline-none transition-all"
-                style={{ padding: '0.6rem 0.875rem', background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}
-                onFocus={e => (e.currentTarget.style.borderColor = '#F59E0B')}
-                onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')}>
-                <option value="cash">Dinheiro</option>
-                <option value="credit_card">Cartão de Crédito</option>
-                <option value="debit_card">Cartão de Débito</option>
-                <option value="pix">PIX</option>
-              </select>
-            </FormField>
+            {/* Pagamento */}
+            <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#F59E0B', marginBottom: 10 }}>Pagamento</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 20 }}>
+              {([
+                { value: 'cash', label: 'Dinheiro', icon: Banknote },
+                { value: 'pix', label: 'PIX', icon: Smartphone },
+                { value: 'credit_card', label: 'Crédito', icon: CreditCard },
+                { value: 'debit_card', label: 'Débito', icon: Wallet },
+                { value: 'meal_voucher', label: 'Vale', icon: CheckSquare },
+                { value: 'other', label: 'Outro', icon: DollarSign },
+              ] as const).map(({ value, label, icon: Icon }) => {
+                const active = form.payment_method === value;
+                return (
+                  <button key={value} type="button" onClick={() => setForm(f => ({ ...f, payment_method: value }))}
+                    style={{
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 0',
+                      borderRadius: 10, fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'all .15s',
+                      background: active ? (isDark ? 'rgba(245,158,11,0.18)' : 'rgba(245,158,11,0.1)') : 'var(--input-bg)',
+                      border: `1px solid ${active ? '#F59E0B' : 'var(--input-border)'}`,
+                      color: active ? '#F59E0B' : 'var(--text-muted)',
+                    }}>
+                    <Icon size={14} />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
             <FormField label="Observações">
               <textarea value={form.notes} onChange={set('notes')}
-                className="w-full rounded-xl text-sm outline-none transition-all resize-none"
-                style={{ padding: '0.6rem 0.875rem', background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)', minHeight: '80px' }}
-                placeholder="Observações sobre o pedido..."
+                className="w-full rounded-xl text-sm outline-none resize-none"
+                style={{ ...selStyle, minHeight: 60, display: 'block', width: '100%', boxSizing: 'border-box' }}
+                placeholder="Alguma observação..."
                 onFocus={e => (e.currentTarget.style.borderColor = '#F59E0B')}
                 onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')} />
             </FormField>
 
-            <div className="rounded-xl p-4" style={{ background: isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.2)' }}>
-              <div className="flex justify-between mb-2">
-                <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Subtotal</span>
-                <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{formatCurrency(subtotal)}</span>
+            {/* Total */}
+            <div style={{ borderRadius: 12, padding: 16, marginTop: 16, marginBottom: 4, background: isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.2)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Subtotal</span>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{formatCurrency(subtotal)}</span>
               </div>
               {form.order_type === 'delivery' && (
-                <div className="flex justify-between mb-3">
-                  <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Taxa de Entrega</span>
-                  <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{formatCurrency(deliveryFee)}</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Entrega</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{formatCurrency(deliveryFee)}</span>
                 </div>
               )}
-              <div className="flex justify-between pt-3" style={{ borderTop: '1px solid rgba(99,102,241,0.2)' }}>
-                <span className="text-base font-bold" style={{ color: '#6366F1' }}>Total</span>
-                <span className="text-lg font-bold" style={{ color: '#6366F1' }}>{formatCurrency(total)}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 10, borderTop: '1px solid rgba(99,102,241,0.2)' }}>
+                <span style={{ fontWeight: 700, color: '#6366F1' }}>Total</span>
+                <span style={{ fontSize: 17, fontWeight: 700, color: '#6366F1' }}>{formatCurrency(total)}</span>
               </div>
             </div>
+
+            {/* Espaço extra para o footer não cobrir conteúdo */}
+            <div style={{ height: 80 }} />
           </div>
-          <ModalFooter onCancel={onClose} onSubmit={() => { }} saving={saving} saveLabel="Criar Pedido" />
+
+          {/* Footer fixo */}
+          <div style={{
+            flexShrink: 0, display: 'flex', gap: 10, padding: '12px 20px',
+            borderTop: '1px solid var(--border)', background: 'var(--surface)',
+          }}>
+            <button type="button" onClick={() => setStep(1)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px',
+                borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)',
+                flexShrink: 0,
+              }}>
+              <ArrowUpRight size={12} style={{ transform: 'rotate(180deg)' }} /> Produtos
+            </button>
+            <button type="submit" disabled={saving}
+              style={{
+                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                padding: '10px 0', borderRadius: 12, fontSize: 13, fontWeight: 700, color: '#fff',
+                background: saving ? 'rgba(99,102,241,0.6)' : 'linear-gradient(135deg,#6366F1,#8B5CF6)',
+                boxShadow: saving ? 'none' : '0 4px 14px rgba(99,102,241,0.3)', border: 'none', cursor: saving ? 'not-allowed' : 'pointer',
+              }}>
+              {saving ? <><Loader2 size={14} className="animate-spin" /> Criando...</> : <><ShoppingCart size={14} /> Criar Pedido</>}
+            </button>
+          </div>
         </form>
-      </ModalShell>
+      </div>
     </ModalBackdrop>
   );
 }
@@ -777,6 +945,7 @@ const STATUS_CFG: Record<string, { label: string; dot: string; bgD: string; bgL:
   preparing: { label: 'Preparando', dot: '#8B5CF6', bgD: 'rgba(139,92,246,0.15)', bgL: 'rgba(139,92,246,0.1)', txD: '#C4B5FD', txL: '#5B21B6' },
   out_for_delivery: { label: 'Saiu para entrega', dot: '#6366F1', bgD: 'rgba(99,102,241,0.15)', bgL: 'rgba(99,102,241,0.1)', txD: '#A5B4FC', txL: '#3730A3' },
   delivered: { label: 'Entregue', dot: '#10B981', bgD: 'rgba(16,185,129,0.15)', bgL: 'rgba(16,185,129,0.1)', txD: '#6EE7B7', txL: '#065F46' },
+  finished: { label: 'Finalizado', dot: '#10B981', bgD: 'rgba(16,185,129,0.15)', bgL: 'rgba(16,185,129,0.1)', txD: '#6EE7B7', txL: '#065F46' },
   cancelled: { label: 'Cancelado', dot: '#EF4444', bgD: 'rgba(239,68,68,0.15)', bgL: 'rgba(239,68,68,0.1)', txD: '#FCA5A5', txL: '#991B1B' },
 };
 
@@ -818,6 +987,8 @@ export function OrdersView() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
   const { orders, loading, refetch } = useOrders(selectedStatus === 'all' ? undefined : (selectedStatus as any));
 
   const filtered = orders.filter(o =>
@@ -826,6 +997,15 @@ export function OrdersView() {
     (o as any).customer_name?.toLowerCase().includes(search.toLowerCase()) ||
     String((o as any).order_number ?? '').includes(search)
   );
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedOrders = filtered.slice(startIndex, startIndex + itemsPerPage);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedStatus, search]);
 
   const stats = {
     total: orders.length,
@@ -921,7 +1101,7 @@ export function OrdersView() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((order: any) => {
+              {paginatedOrders.map((order: any) => {
                 const TypeIcon = ORDER_TYPE_ICON[order.order_type] ?? Package;
                 return (
                   <tr key={order.id} className="transition-colors"
@@ -998,6 +1178,46 @@ export function OrdersView() {
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <ShoppingCart size={32} style={{ color: 'var(--text-muted)', opacity: 0.4 }} />
             <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Nenhum pedido encontrado</p>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-5 py-4" style={{ borderTop: '1px solid var(--border)' }}>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              Mostrando {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filtered.length)} de {filtered.length}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+                Anterior
+              </button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className="w-8 h-8 rounded-lg text-xs font-semibold transition-all"
+                    style={{
+                      background: currentPage === page ? '#6366F1' : 'var(--input-bg)',
+                      color: currentPage === page ? '#fff' : 'var(--text-secondary)',
+                      border: `1px solid ${currentPage === page ? '#6366F1' : 'var(--border)'}`,
+                    }}>
+                    {page}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+                Próxima
+              </button>
+            </div>
           </div>
         )}
       </Card>
