@@ -64,10 +64,10 @@ function SectionHeader({ icon: Icon, label, color = '#6366F1', subtitle }: {
 function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
   return (
     <button type="button" onClick={() => onChange(!value)}
-      className="relative rounded-full transition-all shrink-0"
+      className="relative rounded-full transition-all shrink-0 flex items-center"
       style={{ width: 40, height: 22, background: value ? '#6366F1' : 'rgba(107,114,128,0.3)' }}>
-      <div className="absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all"
-        style={{ left: value ? 22 : 2 }} />
+      <div className="absolute w-4 h-4 rounded-full bg-white shadow transition-all"
+        style={{ left: value ? 22 : 4 }} />
     </button>
   );
 }
@@ -595,9 +595,7 @@ export function StoreSettingsView() {
           <div className="space-y-5">
             <Card className="p-6">
               <SectionHeader icon={ImageIcon} label="Logo" subtitle="Imagem da marca" color="#8B5CF6" />
-              <div className="flex justify-center">
-                <ImageUpload label="Logo da Loja" hint="Quadrado, PNG ou JPG — 200×200px" currentUrl={info.logo_url} bucket="store-images" path={`stores/${store.id}/logo`} height={120} rounded onUploaded={url => setInfo(f => ({ ...f, logo_url: url }))} />
-              </div>
+              <ImageUpload label="Logo da Loja" hint="Quadrado, PNG ou JPG — 200×200px" currentUrl={info.logo_url} bucket="store-images" path={`stores/${store.id}/logo`} height={120} rounded onUploaded={url => setInfo(f => ({ ...f, logo_url: url }))} />
             </Card>
             <Card className="p-6">
               <SectionHeader icon={ImageIcon} label="Capa" subtitle="Imagem de fundo do catálogo" color="#F59E0B" />
