@@ -5,87 +5,22 @@ import { useDeliveryZones, useDeliveryDrivers } from '@/hooks/useDelivery';
 import { useStore } from '@/contexts/StoreContext';
 import { supabase } from '@/supabase/client';
 import { formatCurrency } from '@/lib/utils/format';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { FormField } from '@/components/forms/FormField';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { ModalBackdrop, ModalShell, ModalHeader, ModalFooter } from '@/components/ui/Modal';
+import { Toggle } from '@/components/ui/Toggle';
+import { DeleteConfirm } from '@/components/ui/DeleteConfirm';
+import { StatCard } from '@/components/ui/StatCard';
 import {
   Truck, MapPin, Clock, CheckCircle2, Navigation, Plus, User,
-  Bike, Edit, X, Loader2, AlertTriangle, Trash2,
-  ToggleLeft, ToggleRight, DollarSign, Phone, Package, Send,
-  Building2,
+  Bike, Edit, Loader2, Package, Send, Building2, DollarSign, Phone, Trash2,
 } from 'lucide-react';
 
-// ─── helpers ──────────────────────────────────────────────────────────────────
-function useIsDark() {
-  if (typeof window === 'undefined') return true;
-  return (getComputedStyle(document.documentElement).getPropertyValue('--bg') || '').trim().startsWith('#08');
-}
 type Tab = 'live' | 'zones' | 'drivers';
-
-// Sempre schema core
 const db = () => supabase.schema('core');
 
-// ─── Shared modal primitives ──────────────────────────────────────────────────
-function Backdrop({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      {children}
-    </div>
-  );
-}
-function Shell({ children, maxW = 'max-w-lg' }: { children: React.ReactNode; maxW?: string }) {
-  const isDark = useIsDark();
-  return (
-    <div className={`w-full ${maxW} max-h-[92vh] flex flex-col rounded-2xl overflow-hidden`}
-      style={{ background: isDark ? '#0F1117' : '#FFFFFF', border: '1px solid var(--border)', boxShadow: isDark ? '0 24px 64px rgba(0,0,0,0.7)' : '0 24px 64px rgba(0,0,0,0.14)' }}>
-      {children}
-    </div>
-  );
-}
-function MHead({ title, subtitle, icon: Icon, iconColor = '#6366F1', onClose }: {
-  title: string; subtitle?: string; icon: React.FC<any>; iconColor?: string; onClose: () => void;
-}) {
-  const isDark = useIsDark();
-  return (
-    <div className="flex items-center justify-between px-6 py-4 shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: `linear-gradient(135deg,${iconColor},${iconColor}88)` }}>
-          <Icon size={15} color="#fff" />
-        </div>
-        <div>
-          <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{title}</h2>
-          {subtitle && <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{subtitle}</p>}
-        </div>
-      </div>
-      <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl transition-all" style={{ color: 'var(--text-muted)' }}
-        onMouseEnter={e => Object.assign((e.currentTarget as HTMLElement).style, { background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', color: 'var(--text-primary)' })}
-        onMouseLeave={e => Object.assign((e.currentTarget as HTMLElement).style, { background: 'transparent', color: 'var(--text-muted)' })}>
-        <X size={16} />
-      </button>
-    </div>
-  );
-}
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-        {label}{required && <span style={{ color: '#EF4444' }}>*</span>}
-      </label>
-      {children}
-    </div>
-  );
-}
-function Input({ icon: Icon, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { icon?: React.FC<any> }) {
-  return (
-    <div className="relative">
-      {Icon && <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><Icon size={13} style={{ color: 'var(--text-muted)' }} /></div>}
-      <input {...props}
-        className="w-full rounded-xl text-sm outline-none transition-all"
-        style={{ paddingLeft: Icon ? '2.25rem' : '0.875rem', paddingRight: '0.875rem', paddingTop: '0.6rem', paddingBottom: '0.6rem', background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}
-        onFocus={e => (e.currentTarget.style.borderColor = '#6366F1')}
-        onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')} />
-    </div>
-  );
-}
 function SectionLabel({ label, color = '#6366F1' }: { label: string; color?: string }) {
   return (
     <div className="flex items-center gap-3">
@@ -94,83 +29,9 @@ function SectionLabel({ label, color = '#6366F1' }: { label: string; color?: str
     </div>
   );
 }
-function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
-  const isDark = useIsDark();
-  return (
-    <button type="button" onClick={() => onChange(!checked)}
-      className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl transition-all w-full"
-      style={{
-        background: checked ? (isDark ? 'rgba(16,185,129,0.1)' : 'rgba(16,185,129,0.07)') : (isDark ? 'rgba(107,114,128,0.1)' : 'rgba(107,114,128,0.06)'),
-        border: `1px solid ${checked ? 'rgba(16,185,129,0.2)' : 'var(--border)'}`,
-      }}>
-      {checked ? <ToggleRight size={20} style={{ color: '#10B981' }} /> : <ToggleLeft size={20} style={{ color: 'var(--text-muted)' }} />}
-      <span className="text-sm font-medium" style={{ color: checked ? '#10B981' : 'var(--text-secondary)' }}>{label}</span>
-      <span className="ml-auto text-xs font-bold" style={{ color: checked ? '#10B981' : 'var(--text-muted)' }}>
-        {checked ? 'Ativo' : 'Inativo'}
-      </span>
-    </button>
-  );
-}
-function ModalFooter({ onCancel, saving, saveLabel, accentColor = '#6366F1' }: {
-  onCancel: () => void; saving: boolean; saveLabel: string; accentColor?: string;
-}) {
-  const isDark = useIsDark();
-  return (
-    <div className="flex items-center justify-end gap-2 px-6 py-4 shrink-0"
-      style={{ borderTop: '1px solid var(--border)', background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}>
-      <button type="button" onClick={onCancel}
-        className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-        style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
-        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--surface-hover)'}
-        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'var(--input-bg)'}>
-        Cancelar
-      </button>
-      <button type="submit" disabled={saving}
-        className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-all"
-        style={{ background: `linear-gradient(135deg,${accentColor},${accentColor}cc)`, boxShadow: `0 4px 14px ${accentColor}44` }}>
-        {saving ? <><Loader2 size={14} className="animate-spin" /> Salvando...</> : <><CheckCircle2 size={14} />{saveLabel}</>}
-      </button>
-    </div>
-  );
-}
-function DeleteConfirm({ title, desc, onClose, onConfirm, loading }: {
-  title: string; desc: string; onClose: () => void; onConfirm: () => void; loading: boolean;
-}) {
-  const isDark = useIsDark();
-  return (
-    <Backdrop onClose={onClose}>
-      <Shell maxW="max-w-sm">
-        <div className="p-7 flex flex-col items-center text-center gap-4">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: isDark ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.07)' }}>
-            <AlertTriangle size={26} style={{ color: '#EF4444' }} />
-          </div>
-          <div>
-            <p className="font-bold text-base mb-1" style={{ color: 'var(--text-primary)' }}>{title}</p>
-            <p className="text-sm" style={{ color: 'var(--text-secondary)' }} dangerouslySetInnerHTML={{ __html: desc }} />
-          </div>
-          <div className="flex gap-3 w-full">
-            <button onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all"
-              style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
-              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--surface-hover)'}
-              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'var(--input-bg)'}>
-              Cancelar
-            </button>
-            <button onClick={onConfirm} disabled={loading}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
-              style={{ background: 'linear-gradient(135deg,#EF4444,#DC2626)', boxShadow: '0 4px 14px rgba(239,68,68,0.3)' }}>
-              {loading ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-              {loading ? 'Removendo...' : 'Remover'}
-            </button>
-          </div>
-        </div>
-      </Shell>
-    </Backdrop>
-  );
-}
 
-// ─── Zone modal ───────────────────────────────────────────────────────────────
-// Colunas reais: neighborhood, city, state, delivery_fee, estimated_time_min, active
+const VEHICLE_TYPES = ['Moto', 'Bicicleta', 'Carro', 'A pé'];
+
 function ZoneModal({ zone, storeId, onClose, onSuccess }: { zone?: any; storeId: string; onClose: () => void; onSuccess: () => void }) {
   const isEdit = !!zone;
   const [saving, setSaving] = useState(false);
@@ -210,52 +71,50 @@ function ZoneModal({ zone, storeId, onClose, onSuccess }: { zone?: any; storeId:
   };
 
   return (
-    <Backdrop onClose={onClose}>
-      <Shell maxW="max-w-md">
-        <MHead title={isEdit ? 'Editar Zona' : 'Nova Zona de Entrega'} subtitle="Configure bairro, taxa e tempo estimado" icon={MapPin} iconColor="#10B981" onClose={onClose} />
+    <ModalBackdrop onClose={onClose}>
+      <ModalShell maxW="max-w-md">
+        <ModalHeader title={isEdit ? 'Editar Zona' : 'Nova Zona de Entrega'} subtitle="Configure bairro, taxa e tempo estimado" icon={MapPin} iconColor="#10B981" onClose={onClose} />
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
           <div className="p-6 space-y-5">
             <SectionLabel label="Localização" color="#10B981" />
-            <Field label="Bairro" required>
+            <FormField label="Bairro" required>
               <Input icon={MapPin} value={form.neighborhood} onChange={set('neighborhood')} placeholder="Centro" required />
-            </Field>
+            </FormField>
             <div className="grid grid-cols-3 gap-3">
               <div className="col-span-2">
-                <Field label="Cidade" required>
+                <FormField label="Cidade" required>
                   <Input icon={Building2} value={form.city} onChange={set('city')} placeholder="Fortaleza" required />
-                </Field>
+                </FormField>
               </div>
-              <Field label="UF">
+              <FormField label="UF">
                 <Input value={form.state} onChange={set('state')} placeholder="CE" maxLength={2} />
-              </Field>
+              </FormField>
             </div>
             <div style={{ height: 1, background: 'var(--border)' }} />
             <SectionLabel label="Configurações" color="#6366F1" />
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Taxa de Entrega (R$)" required>
+              <FormField label="Taxa de Entrega (R$)" required>
                 <Input icon={DollarSign} type="number" step="0.01" min="0" value={form.delivery_fee} onChange={set('delivery_fee')} placeholder="5,00" required />
-              </Field>
-              <Field label="Tempo Est. (min)">
+              </FormField>
+              <FormField label="Tempo Est. (min)">
                 <Input icon={Clock} type="number" min="1" value={form.estimated_time_min} onChange={set('estimated_time_min')} placeholder="30" />
-              </Field>
+              </FormField>
             </div>
-            <Field label="Status">
+            <FormField label="Status">
               <Toggle label="Zona disponível para entregas" checked={form.active} onChange={v => setForm(f => ({ ...f, active: v }))} />
-            </Field>
+            </FormField>
           </div>
-          <ModalFooter onCancel={onClose} saving={saving} saveLabel={isEdit ? 'Salvar Zona' : 'Criar Zona'} accentColor="#10B981" />
+          <ModalFooter onCancel={onClose} saving={saving} saveLabel={isEdit ? 'Salvar Zona' : 'Criar Zona'} />
         </form>
-      </Shell>
-    </Backdrop>
+      </ModalShell>
+    </ModalBackdrop>
   );
 }
 
 // ─── Driver modal ─────────────────────────────────────────────────────────────
 // Colunas reais: name, phone, vehicle, plate, active
-const VEHICLE_TYPES = ['Moto', 'Bicicleta', 'Carro', 'A pé'];
-
 function DriverModal({ driver, storeId, onClose, onSuccess }: { driver?: any; storeId: string; onClose: () => void; onSuccess: () => void }) {
-  const isDark = useIsDark();
+  const isDark = typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
   const isEdit = !!driver;
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -285,21 +144,21 @@ function DriverModal({ driver, storeId, onClose, onSuccess }: { driver?: any; st
   };
 
   return (
-    <Backdrop onClose={onClose}>
-      <Shell maxW="max-w-md">
-        <MHead title={isEdit ? 'Editar Entregador' : 'Novo Entregador'} subtitle="Cadastre um entregador na equipe" icon={User} iconColor="#8B5CF6" onClose={onClose} />
+    <ModalBackdrop onClose={onClose}>
+      <ModalShell maxW="max-w-md">
+        <ModalHeader title={isEdit ? 'Editar Entregador' : 'Novo Entregador'} subtitle="Cadastre um entregador na equipe" icon={User} iconColor="#8B5CF6" onClose={onClose} />
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
           <div className="p-6 space-y-5">
             <SectionLabel label="Dados Pessoais" color="#8B5CF6" />
-            <Field label="Nome Completo" required>
+            <FormField label="Nome Completo" required>
               <Input icon={User} value={form.name} onChange={set('name')} placeholder="Carlos Souza" required />
-            </Field>
-            <Field label="Telefone">
+            </FormField>
+            <FormField label="Telefone">
               <Input icon={Phone} value={form.phone} onChange={set('phone')} placeholder="(00) 00000-0000" />
-            </Field>
+            </FormField>
             <div style={{ height: 1, background: 'var(--border)' }} />
             <SectionLabel label="Veículo" color="#6366F1" />
-            <Field label="Tipo de Veículo">
+            <FormField label="Tipo de Veículo">
               <div className="grid grid-cols-4 gap-2">
                 {VEHICLE_TYPES.map(v => (
                   <button key={v} type="button" onClick={() => setForm(f => ({ ...f, vehicle: v }))}
@@ -313,18 +172,18 @@ function DriverModal({ driver, storeId, onClose, onSuccess }: { driver?: any; st
                   </button>
                 ))}
               </div>
-            </Field>
-            <Field label="Placa">
+            </FormField>
+            <FormField label="Placa">
               <Input icon={Bike} value={form.plate} onChange={set('plate')} placeholder="ABC-1234" />
-            </Field>
-            <Field label="Disponibilidade">
+            </FormField>
+            <FormField label="Disponibilidade">
               <Toggle label="Entregador disponível para serviço" checked={form.active} onChange={v => setForm(f => ({ ...f, active: v }))} />
-            </Field>
+            </FormField>
           </div>
-          <ModalFooter onCancel={onClose} saving={saving} saveLabel={isEdit ? 'Salvar' : 'Cadastrar'} accentColor="#8B5CF6" />
+          <ModalFooter onCancel={onClose} saving={saving} saveLabel={isEdit ? 'Salvar' : 'Cadastrar'} />
         </form>
-      </Shell>
-    </Backdrop>
+      </ModalShell>
+    </ModalBackdrop>
   );
 }
 
@@ -369,7 +228,7 @@ function OrderRow({ order, onDispatch, accentColor }: { order: any; onDispatch?:
 
 // ─── Main view ────────────────────────────────────────────────────────────────
 export function DeliveryView() {
-  const isDark = useIsDark();
+  const isDark = typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
   const { store } = useStore();
 
   const [tab, setTab] = useState<Tab>('live');
@@ -670,7 +529,7 @@ export function DeliveryView() {
         <ZoneModal zone={sel} storeId={store.id} onClose={close} onSuccess={async () => { await refetchZones?.(); close(); }} />
       )}
       {modal === 'zone-delete' && sel && (
-        <DeleteConfirm title="Remover Zona" desc={`Remover zona <strong>${sel.neighborhood}</strong>? Esta ação não pode ser desfeita.`} onClose={close} onConfirm={handleDeleteZone} loading={delLoad} />
+        <DeleteConfirm title="Remover Zona" description={`Remover zona <strong>${sel.neighborhood}</strong>? Esta ação não pode ser desfeita.`} onClose={close} onConfirm={handleDeleteZone} loading={delLoad} />
       )}
       {modal === 'driver-create' && store && (
         <DriverModal storeId={store.id} onClose={close} onSuccess={async () => { await refetchDrivers?.(); close(); }} />
@@ -679,7 +538,7 @@ export function DeliveryView() {
         <DriverModal driver={sel} storeId={store.id} onClose={close} onSuccess={async () => { await refetchDrivers?.(); close(); }} />
       )}
       {modal === 'driver-delete' && sel && (
-        <DeleteConfirm title="Remover Entregador" desc={`Remover entregador <strong>${sel.name}</strong>? Esta ação não pode ser desfeita.`} onClose={close} onConfirm={handleDeleteDriver} loading={delLoad} />
+        <DeleteConfirm title="Remover Entregador" description={`Remover entregador <strong>${sel.name}</strong>? Esta ação não pode ser desfeita.`} onClose={close} onConfirm={handleDeleteDriver} loading={delLoad} />
       )}
     </>
   );

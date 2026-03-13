@@ -233,15 +233,22 @@ export function ProductFormModal({ isOpen, onClose, product, onSuccess }: Produc
   };
 
   // Existing images (edit mode)
-  const [existingImages, setExistingImages] = useState<ExistingImage[]>(() =>
-    (product?.product_images ?? [])
-      .slice()
-      .sort((a: any, b: any) => a.sort_order - b.sort_order)
-      .map((img: any, i: number) => ({ ...img, sort_order: i }))
-  );
+  const [existingImages, setExistingImages] = useState<ExistingImage[]>([]);
 
   // New images to upload
   const [newImages, setNewImages] = useState<NewImage[]>([]);
+
+  // Reset images when product changes
+  useEffect(() => {
+    if (isOpen) {
+      const images = (product?.product_images ?? [])
+        .slice()
+        .sort((a: any, b: any) => a.sort_order - b.sort_order)
+        .map((img: any, i: number) => ({ ...img, sort_order: i }));
+      setExistingImages(images);
+      setNewImages([]);
+    }
+  }, [product?.id, isOpen]);
 
   const totalImages = existingImages.length + newImages.length;
 
@@ -403,15 +410,13 @@ export function ProductFormModal({ isOpen, onClose, product, onSuccess }: Produc
   };
 
   // Reset state when product changes
-  const resetState = () => {
-    setExistingImages(
-      (product?.product_images ?? [])
-        .slice()
-        .sort((a: any, b: any) => a.sort_order - b.sort_order)
-        .map((img: any, i: number) => ({ ...img, sort_order: i }))
-    );
-    setNewImages([]);
-  };
+  useEffect(() => {
+    if (!isOpen) {
+      setExistingImages([]);
+      setNewImages([]);
+      setNewCategoryName('');
+    }
+  }, [isOpen]);
 
   // ── render ────────────────────────────────────────────────────────────────
   if (!isOpen) return null;

@@ -4,17 +4,13 @@ import { useInventory } from '@/hooks/useInventory';
 import { useStore } from '@/contexts/StoreContext';
 import { supabase } from '@/supabase/client';
 import { formatCurrency } from '@/lib/utils/format';
+import { Input } from '@/components/ui/Input';
+import { FormField } from '@/components/forms/FormField';
+import { ModalBackdrop, ModalShell, ModalHeader, ModalFooter } from '@/components/ui/Modal';
 import {
   Search, Plus, Edit, AlertTriangle, Package,
-  TrendingDown, TrendingUp, DollarSign, BarChart3,
-  X, CheckCircle2, Loader2, ArrowUpCircle, ArrowDownCircle,
-  FileText, Trash2
+  TrendingUp, DollarSign, BarChart3, ArrowUpCircle, ArrowDownCircle,
 } from 'lucide-react';
-
-function useIsDark(): boolean {
-  if (typeof window === 'undefined') return true;
-  return (getComputedStyle(document.documentElement).getPropertyValue('--bg') || '').trim().startsWith('#08');
-}
 
 const UNITS = ['unit', 'kg', 'g', 'liter', 'ml', 'portion'] as const;
 const UNIT_LABELS: Record<typeof UNITS[number], string> = {
@@ -33,75 +29,6 @@ const MOVEMENT_LABELS: Record<typeof MOVEMENT_TYPES[number], string> = {
   adjustment: 'Ajuste',
 };
 
-// ─── Modal primitives ─────────────────────────────────────────────────────────
-function Backdrop({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}
-      onClick={e => e.target === e.currentTarget && onClose()}>
-      {children}
-    </div>
-  );
-}
-
-function Shell({ children, maxW = 'max-w-lg' }: { children: React.ReactNode; maxW?: string }) {
-  const isDark = useIsDark();
-  return (
-    <div className={`w-full ${maxW} max-h-[92vh] flex flex-col rounded-2xl overflow-hidden`}
-      style={{ background: isDark ? '#0F1117' : '#FFFFFF', border: '1px solid var(--border)', boxShadow: isDark ? '0 24px 64px rgba(0,0,0,0.7)' : '0 24px 64px rgba(0,0,0,0.14)' }}>
-      {children}
-    </div>
-  );
-}
-
-function MHead({ title, subtitle, icon: Icon, iconColor = '#6366F1', onClose }: {
-  title: string; subtitle?: string; icon: React.FC<any>; iconColor?: string; onClose: () => void;
-}) {
-  const isDark = useIsDark();
-  return (
-    <div className="flex items-center justify-between px-6 py-4 shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: `linear-gradient(135deg,${iconColor},${iconColor}88)` }}>
-          <Icon size={15} color="#fff" />
-        </div>
-        <div>
-          <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{title}</h2>
-          {subtitle && <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{subtitle}</p>}
-        </div>
-      </div>
-      <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl transition-all" style={{ color: 'var(--text-muted)' }}
-        onMouseEnter={e => Object.assign((e.currentTarget as HTMLElement).style, { background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)', color: 'var(--text-primary)' })}
-        onMouseLeave={e => Object.assign((e.currentTarget as HTMLElement).style, { background: 'transparent', color: 'var(--text-muted)' })}>
-        <X size={16} />
-      </button>
-    </div>
-  );
-}
-
-function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <label className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-        {label}{required && <span style={{ color: '#EF4444' }}>*</span>}
-      </label>
-      {children}
-    </div>
-  );
-}
-
-function Input({ icon: Icon, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { icon?: React.FC<any> }) {
-  return (
-    <div className="relative">
-      {Icon && <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><Icon size={13} style={{ color: 'var(--text-muted)' }} /></div>}
-      <input {...props}
-        className="w-full rounded-xl text-sm outline-none transition-all"
-        style={{ paddingLeft: Icon ? '2.25rem' : '0.875rem', paddingRight: '0.875rem', paddingTop: '0.6rem', paddingBottom: '0.6rem', background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}
-        onFocus={e => (e.currentTarget.style.borderColor = '#6366F1')}
-        onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')} />
-    </div>
-  );
-}
-
 function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
     <textarea {...props}
@@ -112,26 +39,13 @@ function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
   );
 }
 
-function ModalFooter({ onCancel, saving, saveLabel, accentColor = '#6366F1' }: {
-  onCancel: () => void; saving: boolean; saveLabel: string; accentColor?: string;
-}) {
-  const isDark = useIsDark();
+function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <div className="flex items-center justify-end gap-2 px-6 py-4 shrink-0"
-      style={{ borderTop: '1px solid var(--border)', background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)' }}>
-      <button type="button" onClick={onCancel}
-        className="px-4 py-2 rounded-xl text-sm font-semibold transition-all"
-        style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
-        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--surface-hover)'}
-        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'var(--input-bg)'}>
-        Cancelar
-      </button>
-      <button type="submit" disabled={saving}
-        className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-all"
-        style={{ background: `linear-gradient(135deg,${accentColor},${accentColor}cc)`, boxShadow: `0 4px 14px ${accentColor}44` }}>
-        {saving ? <><Loader2 size={14} className="animate-spin" /> Salvando...</> : <><CheckCircle2 size={14} />{saveLabel}</>}
-      </button>
-    </div>
+    <select {...props}
+      className="w-full rounded-xl text-sm outline-none transition-all"
+      style={{ padding: '0.6rem 0.875rem', background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}
+      onFocus={e => (e.currentTarget.style.borderColor = '#6366F1')}
+      onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')} />
   );
 }
 
@@ -176,44 +90,40 @@ function SupplyModal({ supply, storeId, onClose, onSuccess }: { supply?: any; st
   };
 
   return (
-    <Backdrop onClose={onClose}>
-      <Shell maxW="max-w-md">
-        <MHead title={isEdit ? 'Editar Insumo' : 'Novo Insumo'} subtitle="Configure o insumo de estoque" icon={Package} iconColor="#6366F1" onClose={onClose} />
+    <ModalBackdrop onClose={onClose}>
+      <ModalShell maxW="max-w-md">
+        <ModalHeader title={isEdit ? 'Editar Insumo' : 'Novo Insumo'} subtitle="Configure o insumo de estoque" icon={Package} iconColor="#6366F1" onClose={onClose} />
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
           <div className="p-6 space-y-5">
-            <Field label="Nome do Insumo" required>
+            <FormField label="Nome do Insumo" required>
               <Input icon={Package} value={form.name} onChange={set('name')} placeholder="Ex: Farinha de Trigo" required />
-            </Field>
-            <Field label="Descrição">
+            </FormField>
+            <FormField label="Descrição">
               <Textarea value={form.description} onChange={set('description')} placeholder="Detalhes adicionais..." rows={2} />
-            </Field>
+            </FormField>
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Unidade" required>
-                <select value={form.unit} onChange={set('unit')} required
-                  className="w-full rounded-xl text-sm outline-none transition-all"
-                  style={{ padding: '0.6rem 0.875rem', background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}
-                  onFocus={e => (e.currentTarget.style.borderColor = '#6366F1')}
-                  onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')}>
+              <FormField label="Unidade" required>
+                <Select value={form.unit} onChange={set('unit')} required>
                   {UNITS.map(u => <option key={u} value={u}>{UNIT_LABELS[u]}</option>)}
-                </select>
-              </Field>
-              <Field label="Custo Unitário" required>
+                </Select>
+              </FormField>
+              <FormField label="Custo Unitário" required>
                 <Input icon={DollarSign} type="number" step="0.01" min="0" value={form.unit_cost} onChange={set('unit_cost')} placeholder="0,00" required />
-              </Field>
+              </FormField>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Quantidade Atual" required>
+              <FormField label="Quantidade Atual" required>
                 <Input type="number" step="0.01" min="0" value={form.current_quantity} onChange={set('current_quantity')} placeholder="0" required />
-              </Field>
-              <Field label="Estoque Mínimo" required>
+              </FormField>
+              <FormField label="Estoque Mínimo" required>
                 <Input type="number" step="0.01" min="0" value={form.minimum_quantity} onChange={set('minimum_quantity')} placeholder="0" required />
-              </Field>
+              </FormField>
             </div>
           </div>
-          <ModalFooter onCancel={onClose} saving={saving} saveLabel={isEdit ? 'Salvar' : 'Criar Insumo'} accentColor="#6366F1" />
+          <ModalFooter onCancel={onClose} saving={saving} saveLabel={isEdit ? 'Salvar' : 'Criar Insumo'} />
         </form>
-      </Shell>
-    </Backdrop>
+      </ModalShell>
+    </ModalBackdrop>
   );
 }
 
@@ -260,50 +170,47 @@ function MovementModal({ supply, storeId, onClose, onSuccess }: { supply: any; s
 
   const isOut = form.type === 'manual_out';
   const iconColor = isOut ? '#EF4444' : '#10B981';
+  const Icon = isOut ? ArrowDownCircle : ArrowUpCircle;
 
   return (
-    <Backdrop onClose={onClose}>
-      <Shell maxW="max-w-md">
-        <MHead title="Registrar Movimentação" subtitle={`Insumo: ${supply.name}`} icon={isOut ? ArrowDownCircle : ArrowUpCircle} iconColor={iconColor} onClose={onClose} />
+    <ModalBackdrop onClose={onClose}>
+      <ModalShell maxW="max-w-md">
+        <ModalHeader title="Registrar Movimentação" subtitle={`Insumo: ${supply.name}`} icon={Icon} iconColor={iconColor} onClose={onClose} />
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
           <div className="p-6 space-y-5">
-            <Field label="Tipo de Movimentação" required>
-              <select value={form.type} onChange={set('type')} required
-                className="w-full rounded-xl text-sm outline-none transition-all"
-                style={{ padding: '0.6rem 0.875rem', background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}
-                onFocus={e => (e.currentTarget.style.borderColor = '#6366F1')}
-                onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')}>
+            <FormField label="Tipo de Movimentação" required>
+              <Select value={form.type} onChange={set('type')} required>
                 {MOVEMENT_TYPES.map(t => <option key={t} value={t}>{MOVEMENT_LABELS[t]}</option>)}
-              </select>
-            </Field>
+              </Select>
+            </FormField>
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Quantidade" required>
+              <FormField label="Quantidade" required>
                 <Input type="number" step="0.01" min="0.01" value={form.quantity} onChange={set('quantity')} placeholder="0" required />
-              </Field>
-              <Field label="Custo Unitário" required>
+              </FormField>
+              <FormField label="Custo Unitário" required>
                 <Input icon={DollarSign} type="number" step="0.01" min="0" value={form.unit_cost} onChange={set('unit_cost')} placeholder="0,00" required />
-              </Field>
+              </FormField>
             </div>
-            <Field label="Observações">
+            <FormField label="Observações">
               <Textarea value={form.notes} onChange={set('notes')} placeholder="Notas sobre a movimentação..." rows={2} />
-            </Field>
+            </FormField>
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
               style={{ background: `${iconColor}10`, border: `1px solid ${iconColor}30` }}>
-              <CheckCircle2 size={13} style={{ color: iconColor }} />
+              <Icon size={13} style={{ color: iconColor }} />
               <span style={{ color: 'var(--text-secondary)' }}>
                 {isOut ? 'Saída reduzirá o estoque' : 'Entrada aumentará o estoque'}
               </span>
             </div>
           </div>
-          <ModalFooter onCancel={onClose} saving={saving} saveLabel="Registrar" accentColor={iconColor} />
+          <ModalFooter onCancel={onClose} saving={saving} saveLabel="Registrar" />
         </form>
-      </Shell>
-    </Backdrop>
+      </ModalShell>
+    </ModalBackdrop>
   );
 }
 
 export function InventoryView() {
-  const isDark = useIsDark();
+  const isDark = typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
   const { store } = useStore();
   const { supplies, loading, refetch } = useInventory();
   const [search, setSearch] = useState('');

@@ -92,15 +92,13 @@ export function ModalFooter({ onCancel, onSubmit, saving, saveLabel = 'Salvar', 
       >
         {cancelLabel}
       </button>
-      {onSubmit && (
-        <button
-          type="submit"
-          disabled={saving}
-          className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-all bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/30"
-        >
-          {saveLabel}
-        </button>
-      )}
+      <button
+        type="submit"
+        disabled={saving}
+        className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-all bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/30"
+      >
+        {saveLabel}
+      </button>
     </div>
   );
 }

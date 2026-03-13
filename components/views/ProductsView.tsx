@@ -120,7 +120,10 @@ export function ProductsView() {
       {/* Grid view */}
       {viewMode === 'grid' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filtered.map(product => (
+          {filtered.map(product => {
+            const primaryImage = (product as any).product_images?.find((img: any) => img.is_primary) || (product as any).product_images?.[0];
+            
+            return (
             <div key={product.id}
               className="rounded-2xl overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl group"
               style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--surface-box)' }}>
@@ -128,8 +131,8 @@ export function ProductsView() {
               {/* Image */}
               <div className="aspect-square relative overflow-hidden"
                 style={{ background: isDark ? 'rgba(99,102,241,0.05)' : 'rgba(99,102,241,0.04)' }}>
-                {(product as any).product_images?.[0]?.url ? (
-                  <img src={(product as any).product_images[0].url} alt={product.name}
+                {primaryImage?.url ? (
+                  <img src={primaryImage.url} alt={product.name}
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center gap-2">
@@ -192,7 +195,8 @@ export function ProductsView() {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -211,7 +215,10 @@ export function ProductsView() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(product => (
+                {filtered.map(product => {
+                  const primaryImage = (product as any).product_images?.find((img: any) => img.is_primary) || (product as any).product_images?.[0];
+                  
+                  return (
                   <tr key={product.id} className="transition-colors"
                     style={{ borderBottom: '1px solid var(--border-soft)' }}
                     onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--surface-hover)'}
@@ -220,8 +227,8 @@ export function ProductsView() {
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 flex items-center justify-center"
                           style={{ background: isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.05)' }}>
-                          {(product as any).product_images?.[0]?.url
-                            ? <img src={(product as any).product_images[0].url} alt={product.name} className="w-full h-full object-cover" />
+                          {primaryImage?.url
+                            ? <img src={primaryImage.url} alt={product.name} className="w-full h-full object-cover" />
                             : <Package size={16} style={{ color: '#818CF8', opacity: 0.5 }} />}
                         </div>
                         <div>
@@ -265,7 +272,8 @@ export function ProductsView() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

@@ -1,7 +1,8 @@
 "use client";
-import { useState, useEffect, createContext, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useStore } from '@/contexts/StoreContext';
+import { useTheme, ThemeProvider } from '@/contexts/ThemeContext';
 import { useOrders } from '@/hooks/useOrders';
 import { useTodaySummary } from '@/hooks/useFinance';
 import { useProducts } from '@/hooks/useProducts';
@@ -14,86 +15,22 @@ import { CustomersView } from '@/components/views/CustomersView';
 import { DeliveryView } from '@/components/views/DeliveryView';
 import { InventoryView } from '@/components/views/InventoryView';
 import { FinanceView } from '@/components/views/FinanceView';
-import { formatCurrency } from '@/lib/utils/format';
 import { StoreSettingsView } from '@/components/views/StoreSettingsView';
-import { Settings } from 'lucide-react'; // adicionar Settings aos imports do lucide
+import { StatusBadge } from '@/components/dashboard/StatusBadge';
+import { MetricCard } from '@/components/dashboard/MetricCard';
+import { SectionCard } from '@/components/dashboard/SectionCard';
+import { formatCurrency } from '@/lib/utils/format';
+import { THEMES } from '@/lib/constants/theme';
+import { Settings } from 'lucide-react';
 import {
   LayoutDashboard, Package, ShoppingCart, Users, Truck,
   Warehouse, DollarSign, LogOut, Bell, ChevronRight,
-  TrendingUp, TrendingDown, Clock, CheckCircle2,
-  BarChart3, Activity, Menu, Search, Moon, Sun,
+  Clock, CheckCircle2, BarChart3, Activity, Menu, Search, Moon, Sun,
 } from 'lucide-react';
 import { Box } from '@gravity-ui/icons';
 
-// ─── Theme Context ────────────────────────────────────────────────────────────
-type Theme = 'dark' | 'light';
-const ThemeCtx = createContext<{ theme: Theme; toggle: () => void }>({ theme: 'dark', toggle: () => { } });
-const useTheme = () => useContext(ThemeCtx);
-
-// ─── CSS Variables per theme ──────────────────────────────────────────────────
-const THEMES: Record<Theme, Record<string, string>> = {
-  dark: {
-    '--bg': '#080B12',
-    '--surface': 'rgba(255,255,255,0.025)',
-    '--surface-hover': 'rgba(255,255,255,0.04)',
-    '--border': 'rgba(255,255,255,0.06)',
-    '--border-soft': 'rgba(255,255,255,0.04)',
-    '--text-primary': '#FFFFFF',
-    '--text-secondary': 'rgba(255,255,255,0.55)',
-    '--text-muted': 'rgba(255,255,255,0.28)',
-    '--text-label': 'rgba(255,255,255,0.18)',
-    '--input-bg': 'rgba(255,255,255,0.03)',
-    '--input-border': 'rgba(255,255,255,0.07)',
-    '--bar-track': 'rgba(255,255,255,0.06)',
-    '--header-bg': 'rgba(8,11,18,0.85)',
-    '--scrollbar': 'rgba(255,255,255,0.08)',
-    '--surface-box': '0 1px 3px rgba(0,0,0,0.3)',
-  },
-  light: {
-    '--bg': '#F1F4FA',
-    '--surface': '#FFFFFF',
-    '--surface-hover': 'rgba(0,0,0,0.025)',
-    '--border': 'rgba(0,0,0,0.07)',
-    '--border-soft': 'rgba(0,0,0,0.04)',
-    '--text-primary': '#0F1117',
-    '--text-secondary': '#4B5563',
-    '--text-muted': '#9CA3AF',
-    '--text-label': '#D1D5DB',
-    '--input-bg': 'rgba(0,0,0,0.03)',
-    '--input-border': 'rgba(0,0,0,0.1)',
-    '--bar-track': 'rgba(0,0,0,0.07)',
-    '--header-bg': 'rgba(241,244,250,0.9)',
-    '--scrollbar': 'rgba(0,0,0,0.1)',
-    '--surface-box': '0 1px 4px rgba(0,0,0,0.06)',
-  },
-};
-
 // ─── Types ────────────────────────────────────────────────────────────────────
 type TabId = 'dashboard' | 'products' | 'orders' | 'customers' | 'delivery' | 'inventory' | 'finance' | 'settings';
-// ─── Status map ───────────────────────────────────────────────────────────────
-const STATUS_MAP: Record<string, { label: string; dot: string; bgD: string; bgL: string; txD: string; txL: string }> = {
-  pending: { label: 'Pendente', dot: '#F59E0B', bgD: 'rgba(245,158,11,0.15)', bgL: 'rgba(245,158,11,0.1)', txD: '#FCD34D', txL: '#92400E' },
-  confirmed: { label: 'Confirmado', dot: '#3B82F6', bgD: 'rgba(59,130,246,0.15)', bgL: 'rgba(59,130,246,0.1)', txD: '#93C5FD', txL: '#1E40AF' },
-  preparing: { label: 'Preparando', dot: '#8B5CF6', bgD: 'rgba(139,92,246,0.15)', bgL: 'rgba(139,92,246,0.1)', txD: '#C4B5FD', txL: '#5B21B6' },
-  ready: { label: 'Pronto', dot: '#10B981', bgD: 'rgba(16,185,129,0.15)', bgL: 'rgba(16,185,129,0.1)', txD: '#6EE7B7', txL: '#065F46' },
-  delivering: { label: 'Em entrega', dot: '#6366F1', bgD: 'rgba(99,102,241,0.15)', bgL: 'rgba(99,102,241,0.1)', txD: '#A5B4FC', txL: '#3730A3' },
-  delivered: { label: 'Entregue', dot: '#10B981', bgD: 'rgba(16,185,129,0.15)', bgL: 'rgba(16,185,129,0.1)', txD: '#6EE7B7', txL: '#065F46' },
-  cancelled: { label: 'Cancelado', dot: '#EF4444', bgD: 'rgba(239,68,68,0.15)', bgL: 'rgba(239,68,68,0.1)', txD: '#FCA5A5', txL: '#991B1B' },
-  out_for_delivery: { label: 'Saiu', dot: '#6366F1', bgD: 'rgba(99,102,241,0.15)', bgL: 'rgba(99,102,241,0.1)', txD: '#A5B4FC', txL: '#3730A3' },
-};
-
-function StatusBadge({ status }: { status: string }) {
-  const { theme } = useTheme();
-  const isDark = theme === 'light';
-  const cfg = STATUS_MAP[status] ?? { label: status, dot: '#6B7280', bgD: 'rgba(107,114,128,0.15)', bgL: 'rgba(107,114,128,0.1)', txD: '#D1D5DB', txL: '#374151' };
-  return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold whitespace-nowrap"
-      style={{ background: isDark ? cfg.bgD : cfg.bgL, color: isDark ? cfg.txD : cfg.txL }}>
-      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: cfg.dot }} />
-      {cfg.label}
-    </span>
-  );
-}
 
 // ─── Sidebar — always dark ────────────────────────────────────────────────────
 const NAV: { id: TabId; label: string; icon: React.FC<any> }[] = [
@@ -255,52 +192,10 @@ function Topbar({ onToggle, title, subtitle }: { onToggle: () => void; title: st
 }
 
 // ─── Metric Card ──────────────────────────────────────────────────────────────
-function MetricCard({ label, value, sub, icon: Icon, accent, trend }: {
-  label: string; value: string | number; sub?: string;
-  icon: React.FC<any>; accent: string; trend?: 'up' | 'down' | 'neutral';
-}) {
-  const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Activity;
-  const trendColor = trend === 'up' ? '#10B981' : trend === 'down' ? '#EF4444' : 'var(--text-muted)';
-  return (
-    <div className="rounded-2xl p-5 relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5"
-      style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--surface-box)' }}>
-      <div className="absolute top-0 right-0 w-28 h-28 rounded-full opacity-[0.07] blur-2xl pointer-events-none"
-        style={{ background: accent, transform: 'translate(35%,-35%)' }} />
-      <div className="flex items-start justify-between mb-4">
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `${accent}18` }}>
-          <Icon size={17} style={{ color: accent }} />
-        </div>
-        <div className="flex items-center gap-1 text-xs font-semibold" style={{ color: trendColor }}>
-          <TrendIcon size={12} />{sub}
-        </div>
-      </div>
-      <p className="text-2xl font-bold tracking-tight mb-1" style={{ color: 'var(--text-primary)' }}>{value}</p>
-      <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{label}</p>
-    </div>
-  );
-}
+// Moved to components/dashboard/MetricCard.tsx
 
 // ─── Section Card wrapper ─────────────────────────────────────────────────────
-function SectionCard({ title, icon: Icon, iconColor, action, children }: {
-  title: string; icon: React.FC<any>; iconColor: string;
-  action?: React.ReactNode; children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-2xl overflow-hidden"
-      style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--surface-box)' }}>
-      <div className="flex items-center justify-between px-5 pt-5 pb-4">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: `${iconColor}15` }}>
-            <Icon size={14} style={{ color: iconColor }} />
-          </div>
-          <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>{title}</span>
-        </div>
-        {action}
-      </div>
-      {children}
-    </div>
-  );
-}
+// Moved to components/dashboard/SectionCard.tsx
 
 // ─── Dashboard Home view ──────────────────────────────────────────────────────
 function DashboardHome() {
@@ -575,7 +470,6 @@ export default function DashboardPage() {
 
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
   const [collapsed, setCollapsed] = useState(false);
-  const [theme, setTheme] = useState<Theme>('dark');
   const [isMobile, setIsMobile] = useState(false);
 
   // Detecta mobile
@@ -591,18 +485,6 @@ export default function DashboardPage() {
     if (isMobile) setCollapsed(true);
   }, [isMobile]);
 
-  // Persist theme
-  useEffect(() => {
-    const saved = (typeof window !== 'undefined' ? localStorage.getItem('theme') : null) as Theme | null;
-    if (saved === 'light' || saved === 'dark') setTheme(saved);
-  }, []);
-
-  const toggleTheme = () => setTheme(t => {
-    const next: Theme = t === 'dark' ? 'light' : 'dark';
-    if (typeof window !== 'undefined') localStorage.setItem('theme', next);
-    return next;
-  });
-
   useEffect(() => {
     if (!authLoading && !user) router.push('/auth');
   }, [user, authLoading, router]);
@@ -610,6 +492,35 @@ export default function DashboardPage() {
   if (authLoading || storeLoading) return <LoadingSpinner />;
   if (!user) return null;
 
+  return (
+    <ThemeProvider>
+      <DashboardContent 
+        user={user}
+        store={store}
+        pending={pending}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        collapsed={collapsed}
+        setCollapsed={setCollapsed}
+        isMobile={isMobile}
+        signOut={signOut}
+      />
+    </ThemeProvider>
+  );
+}
+
+function DashboardContent({ user, store, pending, activeTab, setActiveTab, collapsed, setCollapsed, isMobile, signOut }: {
+  user: any;
+  store: any;
+  pending: any[];
+  activeTab: TabId;
+  setActiveTab: (tab: TabId) => void;
+  collapsed: boolean;
+  setCollapsed: (collapsed: boolean | ((prev: boolean) => boolean)) => void;
+  isMobile: boolean;
+  signOut: () => void;
+}) {
+  const { theme } = useTheme();
   const vars = THEMES[theme];
   const { title, subtitle } = PAGE_META[activeTab];
 
@@ -629,7 +540,7 @@ export default function DashboardPage() {
   const cssVars = Object.entries(vars).map(([k, v]) => `${k}:${v}`).join(';');
 
   return (
-    <ThemeCtx.Provider value={{ theme, toggle: toggleTheme }}>
+    <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Mono:wght@400;500&display=swap');
         .neopos { ${cssVars}; font-family:'DM Sans',system-ui,sans-serif; }
@@ -640,7 +551,6 @@ export default function DashboardPage() {
         .neopos input::placeholder { color:var(--text-muted) !important; opacity:1; }
       `}</style>
 
-      {/* Overlay mobile */}
       {isMobile && !collapsed && (
         <div 
           className="fixed inset-0 bg-black/50 z-40 transition-opacity duration-300"
@@ -674,6 +584,6 @@ export default function DashboardPage() {
           </main>
         </div>
       </div>
-    </ThemeCtx.Provider>
+    </>
   );
 }
