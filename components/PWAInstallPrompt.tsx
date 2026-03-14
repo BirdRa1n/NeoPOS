@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { X, Download, Smartphone, Share, Plus, Home } from 'lucide-react';
+import { COLORS } from '@/lib/constants';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -78,7 +79,7 @@ export function PWAInstallPrompt() {
     return (
       <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
         <div className="w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in slide-in-from-bottom-4 duration-300"
-          style={{ background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)' }}>
+          style={{ background: COLORS.accentGradient }}>
           
           <div className="flex items-start justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -169,7 +170,7 @@ export function PWAInstallPrompt() {
   return (
     <div className="fixed bottom-4 left-4 right-4 z-[9999] animate-in slide-in-from-bottom-4 duration-300">
       <div className="max-w-md mx-auto rounded-2xl p-4 shadow-2xl backdrop-blur-xl"
-        style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.95) 0%, rgba(139,92,246,0.95) 100%)' }}>
+        style={{ background: `linear-gradient(135deg, rgba(99,102,241,0.95) 0%, rgba(139,92,246,0.95) 100%)` }}>
         
         <div className="flex items-start gap-3">
           <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center shrink-0">

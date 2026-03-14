@@ -11,7 +11,7 @@ export function StatusBadge({ status }: { status: string }) {
     bgD: ALPHA.neutralBg, 
     bgL: ALPHA.neutralBg, 
     txD: COLORS.neutralSoft, 
-    txL: '#374151' 
+    txL: '#374151'
   };
   
   return (

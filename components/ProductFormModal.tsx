@@ -9,6 +9,7 @@ import {
 import { supabase } from '@/supabase/client';
 import { useStore } from '@/contexts/StoreContext';
 import toast from 'react-hot-toast';
+import { COLORS, ALPHA } from '@/lib/constants';
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 function useIsDark(): boolean {
@@ -47,7 +48,7 @@ function Field({ label, required, children, hint }: {
       <label className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wider"
         style={{ color: 'var(--text-muted)' }}>
         {label}
-        {required && <span style={{ color: '#EF4444' }}>*</span>}
+        {required && <span style={{ color: COLORS.danger }}>*</span>}
       </label>
       {children}
       {hint && <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{hint}</p>}
@@ -77,7 +78,7 @@ function StyledInput({ icon: Icon, ...props }: React.InputHTMLAttributes<HTMLInp
           border: '1px solid var(--input-border)',
           color: 'var(--text-primary)',
         }}
-        onFocus={e => (e.currentTarget.style.borderColor = '#6366F1')}
+        onFocus={e => (e.currentTarget.style.borderColor = COLORS.accent)}
         onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')}
       />
     </div>
@@ -97,7 +98,7 @@ function StyledTextarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>
         color: 'var(--text-primary)',
         minHeight: 80,
       }}
-      onFocus={e => (e.currentTarget.style.borderColor = '#6366F1')}
+      onFocus={e => (e.currentTarget.style.borderColor = COLORS.accent)}
       onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')}
     />
   );
@@ -121,9 +122,9 @@ function ImageThumb({
     <div className="relative group rounded-xl overflow-hidden aspect-square"
       style={{
         border: isPrimary
-          ? '2px solid #6366F1'
+          ? `2px solid ${COLORS.accent}`
           : '2px solid var(--border)',
-        boxShadow: isPrimary ? '0 0 0 3px rgba(99,102,241,0.15)' : 'none',
+        boxShadow: isPrimary ? ALPHA.accentGlow : 'none',
         transition: 'all 0.15s',
       }}>
 
@@ -132,7 +133,7 @@ function ImageThumb({
       {/* Primary badge */}
       {isPrimary && (
         <div className="absolute top-1.5 left-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[10px] font-bold text-white"
-          style={{ background: '#6366F1' }}>
+          style={{ background: COLORS.accent }}>
           <Star size={8} fill="white" /> Principal
         </div>
       )}
@@ -165,7 +166,7 @@ function ImageThumb({
           <button onClick={onSetPrimary}
             className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold text-white transition-all"
             style={{ background: 'rgba(99,102,241,0.7)' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(99,102,241,0.9)')}
+            onMouseEnter={e => (e.currentTarget.style.background = `${COLORS.accent}ee`)}
             onMouseLeave={e => (e.currentTarget.style.background = 'rgba(99,102,241,0.7)')}>
             <Star size={9} /> Definir principal
           </button>
@@ -175,7 +176,7 @@ function ImageThumb({
         <button onClick={onDelete}
           className="w-full flex items-center justify-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold text-white transition-all"
           style={{ background: 'rgba(239,68,68,0.7)' }}
-          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.9)')}
+          onMouseEnter={e => (e.currentTarget.style.background = `${COLORS.danger}ee`)}
           onMouseLeave={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.7)')}>
           <Trash2 size={9} /> Remover
         </button>
@@ -428,7 +429,7 @@ export function ProductFormModal({ isOpen, onClose, product, onSuccess }: Produc
       {/* Backdrop */}
       <div
         className="fixed inset-0 z-50 flex items-center justify-center p-4"
-        style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)' }}
+        style={{ background: ALPHA.overlayMd, backdropFilter: ALPHA.backdropBlur }}
         onClick={e => e.target === e.currentTarget && onClose()}
       >
         {/* Dialog */}
@@ -444,8 +445,8 @@ export function ProductFormModal({ isOpen, onClose, product, onSuccess }: Produc
             style={{ borderBottom: '1px solid var(--border)' }}>
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg,#6366F1,#8B5CF6)' }}>
-                <Package size={15} color="#fff" />
+                style={{ background: COLORS.accentGradient }}>
+                <Package size={15} color={COLORS.white} />
               </div>
               <div>
                 <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
@@ -472,7 +473,7 @@ export function ProductFormModal({ isOpen, onClose, product, onSuccess }: Produc
 
                 {/* ── Section: Basic info ── */}
                 <div className="space-y-4">
-                  <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#6366F1' }}>
+                  <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: COLORS.accent }}>
                     Informações Básicas
                   </p>
 
@@ -495,7 +496,7 @@ export function ProductFormModal({ isOpen, onClose, product, onSuccess }: Produc
                             border: '1px solid var(--input-border)',
                             color: 'var(--text-primary)',
                           }}
-                          onFocus={e => (e.currentTarget.style.borderColor = '#6366F1')}
+                          onFocus={e => (e.currentTarget.style.borderColor = COLORS.accent)}
                           onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')}>
                           <option value="">Sem categoria</option>
                           {categories.map(cat => (
@@ -513,12 +514,12 @@ export function ProductFormModal({ isOpen, onClose, product, onSuccess }: Produc
                         onClick={() => setShowCategoryModal(true)}
                         className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all shrink-0"
                         style={{
-                          background: isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.08)',
-                          color: '#818CF8',
-                          border: '1px solid rgba(99,102,241,0.2)',
+                          background: isDark ? ALPHA.accentBgSubtleD : ALPHA.accentBgSubtleL,
+                          color: COLORS.accentLight,
+                          border: `1px solid ${ALPHA.accentBorder}`,
                         }}
-                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.15)'}
-                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.08)'}>
+                        onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? ALPHA.accentBgD : ALPHA.accentBgL}
+                        onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = isDark ? ALPHA.accentBgSubtleD : ALPHA.accentBgSubtleL}>
                         <Plus size={13} /> Nova
                       </button>
                     </div>
@@ -549,7 +550,7 @@ export function ProductFormModal({ isOpen, onClose, product, onSuccess }: Produc
 
                 {/* ── Section: Pricing ── */}
                 <div className="space-y-4">
-                  <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#10B981' }}>
+                  <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: COLORS.success }}>
                     Preços
                   </p>
 
@@ -581,8 +582,8 @@ export function ProductFormModal({ isOpen, onClose, product, onSuccess }: Produc
 
                   {/* Price preview */}
                   <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
-                    style={{ background: isDark ? 'rgba(16,185,129,0.06)' : 'rgba(16,185,129,0.04)', border: '1px solid rgba(16,185,129,0.12)' }}>
-                    <CheckCircle2 size={13} style={{ color: '#10B981' }} />
+                    style={{ background: isDark ? ALPHA.successBgSubtle : 'rgba(16,185,129,0.04)', border: `1px solid ${ALPHA.successBorder}` }}>
+                    <CheckCircle2 size={13} style={{ color: COLORS.success }} />
                     <span style={{ color: 'var(--text-muted)' }}>
                       Preço promocional aparece em destaque no catálogo público
                     </span>
@@ -595,7 +596,7 @@ export function ProductFormModal({ isOpen, onClose, product, onSuccess }: Produc
                 {/* ── Section: Images ── */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#8B5CF6' }}>
+                    <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: COLORS.purple }}>
                       Imagens ({totalImages}/5)
                     </p>
                     {totalImages > 0 && (
@@ -639,9 +640,9 @@ export function ProductFormModal({ isOpen, onClose, product, onSuccess }: Produc
                           color: 'var(--text-muted)',
                         }}
                         onMouseEnter={e => {
-                          (e.currentTarget as HTMLElement).style.borderColor = '#6366F1';
-                          (e.currentTarget as HTMLElement).style.color = '#818CF8';
-                          (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(99,102,241,0.06)' : 'rgba(99,102,241,0.04)';
+                          (e.currentTarget as HTMLElement).style.borderColor = COLORS.accent;
+                          (e.currentTarget as HTMLElement).style.color = COLORS.accentLight;
+                          (e.currentTarget as HTMLElement).style.background = isDark ? ALPHA.accentBgSubtleD : ALPHA.accentBgSubtleL;
                         }}
                         onMouseLeave={e => {
                           (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
@@ -665,7 +666,7 @@ export function ProductFormModal({ isOpen, onClose, product, onSuccess }: Produc
                         background: 'var(--input-bg)',
                       }}
                       onMouseEnter={e => {
-                        (e.currentTarget as HTMLElement).style.borderColor = '#6366F1';
+                        (e.currentTarget as HTMLElement).style.borderColor = COLORS.accent;
                         (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(99,102,241,0.05)' : 'rgba(99,102,241,0.03)';
                       }}
                       onMouseLeave={e => {
@@ -673,11 +674,11 @@ export function ProductFormModal({ isOpen, onClose, product, onSuccess }: Produc
                         (e.currentTarget as HTMLElement).style.background = 'var(--input-bg)';
                       }}>
                       <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
-                        style={{ background: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.07)' }}>
-                        <Upload size={22} style={{ color: '#818CF8' }} />
+                        style={{ background: isDark ? ALPHA.accentBgSubtleD : 'rgba(99,102,241,0.07)' }}>
+                        <Upload size={22} style={{ color: COLORS.accentLight }} />
                       </div>
                       <div className="text-center">
-                        <p className="text-sm font-semibold" style={{ color: '#818CF8' }}>Clique para fazer upload</p>
+                        <p className="text-sm font-semibold" style={{ color: COLORS.accentLight }}>Clique para fazer upload</p>
                         <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>PNG, JPG, WEBP · Máx 5 imagens</p>
                       </div>
                     </button>
@@ -696,7 +697,7 @@ export function ProductFormModal({ isOpen, onClose, product, onSuccess }: Produc
                   {totalImages > 0 && (
                     <div className="flex items-center gap-4 text-[11px]" style={{ color: 'var(--text-muted)' }}>
                       <div className="flex items-center gap-1.5">
-                        <span className="w-3 h-3 rounded border-2 shrink-0" style={{ borderColor: '#6366F1' }} />
+                        <span className="w-3 h-3 rounded border-2 shrink-0" style={{ borderColor: COLORS.accent }} />
                         Imagem principal
                       </div>
                       <div className="flex items-center gap-1.5">
@@ -740,8 +741,8 @@ export function ProductFormModal({ isOpen, onClose, product, onSuccess }: Produc
                 disabled={loading}
                 className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-semibold text-white transition-all disabled:opacity-60"
                 style={{
-                  background: loading ? '#6366F1' : 'linear-gradient(135deg,#6366F1,#8B5CF6)',
-                  boxShadow: loading ? 'none' : '0 4px 14px rgba(99,102,241,0.35)',
+                  background: loading ? COLORS.accent : COLORS.accentGradient,
+                  boxShadow: loading ? 'none' : COLORS.accentShadow,
                 }}>
                 {loading ? (
                   <><Loader2 size={14} className="animate-spin" /> Salvando...</>
@@ -757,7 +758,7 @@ export function ProductFormModal({ isOpen, onClose, product, onSuccess }: Produc
       {/* Category Creation Modal */}
       {showCategoryModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4"
-          style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
+          style={{ background: ALPHA.overlayDark, backdropFilter: 'blur(8px)' }}
           onClick={e => e.target === e.currentTarget && setShowCategoryModal(false)}>
           <div className="w-full max-w-md rounded-2xl overflow-hidden shadow-[var(--surface-box)]"
             style={{
@@ -767,8 +768,8 @@ export function ProductFormModal({ isOpen, onClose, product, onSuccess }: Produc
             <div className="p-6">
               <div className="flex items-center gap-3 mb-5">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-                  style={{ background: 'linear-gradient(135deg,#6366F1,#8B5CF6)' }}>
-                  <FolderTree size={18} color="#fff" />
+                  style={{ background: COLORS.accentGradient }}>
+                  <FolderTree size={18} color={COLORS.white} />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>Nova Categoria</h3>
@@ -802,7 +803,7 @@ export function ProductFormModal({ isOpen, onClose, product, onSuccess }: Produc
                     onClick={handleCreateCategory}
                     disabled={!newCategoryName.trim() || creatingCategory}
                     className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
-                    style={{ background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', boxShadow: '0 4px 14px rgba(99,102,241,0.35)' }}>
+                    style={{ background: COLORS.accentGradient, boxShadow: COLORS.accentShadow }}>
                     {creatingCategory ? (
                       <><Loader2 size={14} className="animate-spin" /> Criando...</>
                     ) : (

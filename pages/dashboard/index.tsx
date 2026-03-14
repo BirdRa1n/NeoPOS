@@ -23,6 +23,7 @@ import { MetricCard } from '@/components/dashboard/MetricCard';
 import { SectionCard } from '@/components/dashboard/SectionCard';
 import { formatCurrency } from '@/lib/utils/format';
 import { THEMES } from '@/lib/constants/theme';
+import { COLORS, ALPHA } from '@/lib/constants';
 import { Settings } from 'lucide-react';
 import {
   LayoutDashboard, Package, ShoppingCart, Users, Truck,
@@ -91,12 +92,12 @@ function Sidebar({ activeTab, onTabChange, pendingCount, collapsed, storeName, u
       {/* Logo */}
       <div className="h-16 flex items-center px-4 shrink-0" style={{ borderBottom: '1px solid var(--sidebar-border)' }}>
         {(collapsed && !isMobile) ? (
-          <div className="mx-auto w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#6366F1,#8B5CF6)' }}>
+          <div className="mx-auto w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: COLORS.accentGradient }}>
             <Box width={16} height={16} color="#fff" />
           </div>
         ) : (
           <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg,#6366F1,#8B5CF6)' }}>
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: COLORS.accentGradient }}>
               <Box width={16} height={16} color="#fff" />
             </div>
             <span className="font-bold text-sm tracking-wide truncate" style={{ color: 'var(--sidebar-store-text)' }}>NeoDelivery</span>
@@ -144,7 +145,7 @@ function Sidebar({ activeTab, onTabChange, pendingCount, collapsed, storeName, u
                 </span>
               )}
               {(!collapsed || isMobile) && badge > 0 && (
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(239,68,68,0.2)', color: '#FCA5A5' }}>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: ALPHA.dangerBgD, color: COLORS.dangerSoft }}>
                   {badge > 99 ? '99+' : badge}
                 </span>
               )}
@@ -163,7 +164,7 @@ function Sidebar({ activeTab, onTabChange, pendingCount, collapsed, storeName, u
             onClick={onSignOut}
             className="w-full flex justify-center p-2 rounded-xl transition-all"
             style={{ color: 'var(--sidebar-icon)' }}
-            onMouseEnter={e => Object.assign((e.currentTarget as HTMLElement).style, { color: '#F87171', background: 'rgba(239,68,68,0.1)' })}
+            onMouseEnter={e => Object.assign((e.currentTarget as HTMLElement).style, { color: COLORS.dangerLight, background: ALPHA.dangerBgSubtle })}
             onMouseLeave={e => Object.assign((e.currentTarget as HTMLElement).style, { color: 'var(--sidebar-icon)', background: 'transparent' })}
           >
             <LogOut size={16} />
@@ -172,7 +173,7 @@ function Sidebar({ activeTab, onTabChange, pendingCount, collapsed, storeName, u
           <div className="flex items-center gap-2.5">
             <div
               className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold text-white"
-              style={{ background: userRole === 'staff' && staffInfo?.role ? staffInfo.role.color : 'linear-gradient(135deg,#6366F1,#8B5CF6)' }}
+              style={{ background: userRole === 'staff' && staffInfo?.role ? staffInfo.role.color : COLORS.accentGradient }}
             >
               {effectiveName?.[0]?.toUpperCase()}
             </div>
@@ -188,7 +189,7 @@ function Sidebar({ activeTab, onTabChange, pendingCount, collapsed, storeName, u
               onClick={onSignOut}
               className="p-1.5 rounded-lg transition-all"
               style={{ color: 'var(--sidebar-icon)' }}
-              onMouseEnter={e => Object.assign((e.currentTarget as HTMLElement).style, { color: '#F87171', background: 'rgba(239,68,68,0.1)' })}
+              onMouseEnter={e => Object.assign((e.currentTarget as HTMLElement).style, { color: COLORS.dangerLight, background: ALPHA.dangerBgSubtle })}
               onMouseLeave={e => Object.assign((e.currentTarget as HTMLElement).style, { color: 'var(--sidebar-icon)', background: 'transparent' })}
             >
               <LogOut size={14} />
@@ -250,7 +251,7 @@ function Topbar({ onToggle, title, subtitle }: { onToggle: () => void; title: st
             placeholder="Buscar..."
             className="pl-8 pr-3 py-1.5 text-xs rounded-xl outline-none transition-all"
             style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-secondary)', width: 160 }}
-            onFocus={e => (e.currentTarget.style.borderColor = '#6366F1')}
+            onFocus={e => (e.currentTarget.style.borderColor = COLORS.accent)}
             onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')}
           />
         </div>
@@ -259,9 +260,9 @@ function Topbar({ onToggle, title, subtitle }: { onToggle: () => void; title: st
           onClick={cycleTheme}
           title={`Tema: ${getThemeLabel()}`}
           className="h-9 px-3 flex items-center justify-center gap-2 rounded-xl transition-all"
-          style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: isDark ? 'rgba(255,255,255,0.4)' : '#6B7280', boxShadow: 'var(--surface-box)' }}
-          onMouseEnter={e => Object.assign((e.currentTarget as HTMLElement).style, { color: isDark ? '#FCD34D' : '#6366F1', borderColor: isDark ? 'rgba(252,211,77,0.3)' : 'rgba(99,102,241,0.3)' })}
-          onMouseLeave={e => Object.assign((e.currentTarget as HTMLElement).style, { color: isDark ? 'rgba(255,255,255,0.4)' : '#6B7280', borderColor: 'var(--border)' })}
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: isDark ? 'rgba(255,255,255,0.4)' : COLORS.neutral, boxShadow: 'var(--surface-box)' }}
+          onMouseEnter={e => Object.assign((e.currentTarget as HTMLElement).style, { color: isDark ? COLORS.warningLight : COLORS.accent, borderColor: isDark ? ALPHA.warningBorder : ALPHA.accentBorder })}
+          onMouseLeave={e => Object.assign((e.currentTarget as HTMLElement).style, { color: isDark ? 'rgba(255,255,255,0.4)' : COLORS.neutral, borderColor: 'var(--border)' })}
         >
           <span className="text-sm">{getThemeIcon()}</span>
           <span className="text-xs font-medium hidden sm:inline">{getThemeLabel()}</span>
@@ -277,9 +278,9 @@ function AccessDenied({ tabLabel }: { tabLabel: string }) {
     <div className="flex flex-col items-center justify-center h-64 gap-4 text-center">
       <div
         className="w-14 h-14 rounded-2xl flex items-center justify-center"
-        style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)' }}
+        style={{ background: ALPHA.dangerBgSubtle, border: `1px solid ${ALPHA.dangerBorder}` }}
       >
-        <ShieldAlert size={24} style={{ color: '#EF4444', opacity: 0.7 }} />
+        <ShieldAlert size={24} style={{ color: COLORS.danger, opacity: 0.7 }} />
       </div>
       <div>
         <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
@@ -337,7 +338,7 @@ function DashboardHome() {
       {/* Greeting */}
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: '#6366F1' }}>{dateStr}</p>
+          <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: COLORS.accent }}>{dateStr}</p>
           <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>
             {displayName ? `Olá, ${displayName.split(' ')[0]}` : 'Visão geral de hoje'}
           </h2>
@@ -351,9 +352,9 @@ function DashboardHome() {
         <div
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold"
           style={{
-            background: isDark ? (store?.is_open ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)') : (store?.is_open ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)'),
-            color: isDark ? (store?.is_open ? '#34D399' : '#F87171') : (store?.is_open ? '#10B981' : '#EF4444'),
-            border: '1px solid rgba(16,185,129,0.2)',
+            background: isDark ? (store?.is_open ? ALPHA.successBgSubtle : ALPHA.dangerBgSubtle) : (store?.is_open ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)'),
+            color: isDark ? (store?.is_open ? COLORS.successLight : COLORS.dangerLight) : (store?.is_open ? COLORS.success : COLORS.danger),
+            border: `1px solid ${ALPHA.successBorder}`,
           }}
         >
           <span className={`w-1.5 h-1.5 rounded-full ${store?.is_open ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'}`} />
@@ -364,16 +365,16 @@ function DashboardHome() {
       {/* Métricas — exibe de acordo com permissões */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         {can('perm_orders_view' as any) && (
-          <MetricCard label="Pedidos Hoje" value={todayOrders.length} icon={ShoppingCart} accent="#6366F1" sub={`${pending.length} pend.`} trend="up" />
+          <MetricCard label="Pedidos Hoje" value={todayOrders.length} icon={ShoppingCart} accent={COLORS.accent} sub={`${pending.length} pend.`} trend="up" />
         )}
         {can('perm_finance_view' as any) && (
-          <MetricCard label="Receita Líquida" value={formatCurrency(netRevenue)} icon={DollarSign} accent="#10B981" sub="hoje" trend="up" />
+          <MetricCard label="Receita Líquida" value={formatCurrency(netRevenue)} icon={DollarSign} accent={COLORS.success} sub="hoje" trend="up" />
         )}
         {can('perm_finance_view' as any) && (
-          <MetricCard label="Ticket Médio" value={formatCurrency(avgTicket)} icon={BarChart3} accent="#F59E0B" sub="por pedido" trend="neutral" />
+          <MetricCard label="Ticket Médio" value={formatCurrency(avgTicket)} icon={BarChart3} accent={COLORS.warning} sub="por pedido" trend="neutral" />
         )}
         {can('perm_customers_view' as any) && (
-          <MetricCard label="Clientes" value={customers.length} icon={Users} accent="#EC4899" sub="cadastrados" trend="up" />
+          <MetricCard label="Clientes" value={customers.length} icon={Users} accent={COLORS.pink} sub="cadastrados" trend="up" />
         )}
       </div>
 
@@ -385,10 +386,10 @@ function DashboardHome() {
             <SectionCard
               title="Pedidos Pendentes"
               icon={Clock}
-              iconColor="#6366F1"
+              iconColor={COLORS.accent}
               action={
                 pending.length > 0 ? (
-                  <button className="text-xs font-semibold flex items-center gap-1 transition-colors hover:opacity-75" style={{ color: '#6366F1' }}>
+                  <button className="text-xs font-semibold flex items-center gap-1 transition-colors hover:opacity-75" style={{ color: COLORS.accent }}>
                     Ver todos <ChevronRight size={12} />
                   </button>
                 ) : undefined
@@ -397,7 +398,7 @@ function DashboardHome() {
               <div className="px-3 pb-4 space-y-0.5">
                 {pending.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-10 gap-2">
-                    <CheckCircle2 size={28} style={{ color: isDark ? 'rgba(16,185,129,0.4)' : 'rgba(5,150,105,0.3)' }} />
+                    <CheckCircle2 size={28} style={{ color: isDark ? `${COLORS.success}66` : `${COLORS.successDark}4D` }} />
                     <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Nenhum pedido pendente</p>
                   </div>
                 ) : (
@@ -409,7 +410,7 @@ function DashboardHome() {
                       onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
                     >
                       <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold"
-                        style={{ background: isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.08)', color: '#818CF8' }}>
+                        style={{ background: isDark ? ALPHA.accentBgSubtleD : ALPHA.accentBgSubtleL, color: COLORS.accentLight }}>
                         #{(order.order_number ?? order.id?.slice(0, 3) ?? '??').toString().slice(-2)}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -439,9 +440,9 @@ function DashboardHome() {
               <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Tipo de Pedido</p>
               <div className="space-y-3.5">
                 {[
-                  { label: 'Delivery', count: delivery, color: '#6366F1', icon: Truck },
-                  { label: 'Retirada', count: pickup, color: '#F59E0B', icon: Package },
-                  { label: 'Mesa', count: table, color: '#10B981', icon: Users },
+                  { label: 'Delivery', count: delivery, color: COLORS.accent,   icon: Truck },
+                  { label: 'Retirada', count: pickup,   color: COLORS.warning,  icon: Package },
+                  { label: 'Mesa',     count: table,    color: COLORS.success,  icon: Users },
                 ].map(({ label, count, color, icon: Icon }) => (
                   <div key={label} className="flex items-center gap-3">
                     <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${color}12` }}>
@@ -469,10 +470,10 @@ function DashboardHome() {
                 <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Resumo Financeiro</p>
                 <div className="space-y-3">
                   {[
-                    { label: 'Receita Bruta', value: summary?.gross_revenue ?? 0, color: '#6366F1' },
-                    { label: 'Descontos', value: summary?.total_discounts ?? 0, color: '#EF4444' },
-                    { label: 'Taxa Entrega', value: summary?.total_delivery_fees ?? 0, color: '#F59E0B' },
-                    { label: 'Receita Líquida', value: summary?.net_revenue ?? 0, color: '#10B981' },
+                    { label: 'Receita Bruta',  value: summary?.gross_revenue ?? 0,       color: COLORS.accent },
+                    { label: 'Descontos',       value: summary?.total_discounts ?? 0,     color: COLORS.danger },
+                    { label: 'Taxa Entrega',    value: summary?.total_delivery_fees ?? 0, color: COLORS.warning },
+                    { label: 'Receita Líquida', value: summary?.net_revenue ?? 0,         color: COLORS.success },
                   ].map(({ label, value, color }) => (
                     <div key={label} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -492,7 +493,7 @@ function DashboardHome() {
       {/* Bottom row */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         {can('perm_orders_view' as any) && (
-          <SectionCard title="Últimos Pedidos" icon={Activity} iconColor="#6366F1">
+          <SectionCard title="Últimos Pedidos" icon={Activity} iconColor={COLORS.accent}>
             <div className="overflow-x-auto pb-4">
               <table className="w-full text-xs">
                 <thead>
@@ -531,7 +532,7 @@ function DashboardHome() {
         )}
 
         {can('perm_catalog_view' as any) && (
-          <SectionCard title="Produtos" icon={Package} iconColor="#8B5CF6"
+          <SectionCard title="Produtos" icon={Package} iconColor={COLORS.purple}
             action={<span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{products.length} cadastrados</span>}>
             <div className="px-3 pb-4 space-y-0.5">
               {products.slice(0, 5).map((p: any) => (
@@ -540,10 +541,10 @@ function DashboardHome() {
                   onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--surface-hover)'}
                   onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
                   <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0 flex items-center justify-center"
-                    style={{ background: isDark ? 'rgba(139,92,246,0.1)' : 'rgba(139,92,246,0.07)' }}>
+                    style={{ background: isDark ? ALPHA.purpleBgD : ALPHA.purpleBgL }}>
                     {p.product_images?.[0]?.url
                       ? <img src={p.product_images[0].url} alt={p.name} className="w-full h-full object-cover" />
-                      : <Package size={14} style={{ color: '#8B5CF6', opacity: 0.5 }} />}
+                      : <Package size={14} style={{ color: COLORS.purple, opacity: 0.5 }} />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{p.name}</p>
@@ -555,7 +556,7 @@ function DashboardHome() {
                     <span className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
                       {formatCurrency(p.promotional_price ?? p.price)}
                     </span>
-                    <span className="w-2 h-2 rounded-full" style={{ background: p.available ? '#10B981' : '#6B7280' }} />
+                    <span className="w-2 h-2 rounded-full" style={{ background: p.available ? COLORS.success : COLORS.neutral }} />
                   </div>
                 </div>
               ))}
@@ -647,7 +648,7 @@ function DashboardContent({ user, store, activeTab, setActiveTab, collapsed, set
   const { title, subtitle } = PAGE_META[activeTab];
 
   useEffect(() => {
-    const bgColor = theme === 'dark' ? '#080B12' : '#F1F4FA';
+    const bgColor = theme === 'dark' ? '#080B12' : '#F1F4FA'; // matches THEMES dark/light --bg
     let meta = document.querySelector('meta[name="theme-color"]');
     if (!meta) {
       meta = document.createElement('meta');
@@ -685,7 +686,7 @@ function DashboardContent({ user, store, activeTab, setActiveTab, collapsed, set
           <p className="text-white font-bold mb-2">Nenhuma loja encontrada</p>
           <p className="text-gray-400 text-sm mb-6">Sua conta não está associada a nenhuma loja ativa.</p>
           <button onClick={signOut} className="px-4 py-2 rounded-xl text-sm font-semibold text-white"
-            style={{ background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.3)' }}>
+            style={{ background: ALPHA.accentBgSubtleD, border: `1px solid ${ALPHA.accentBorderMd}` }}>
             Sair
           </button>
         </div>
