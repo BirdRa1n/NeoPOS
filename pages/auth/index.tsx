@@ -9,9 +9,10 @@ import {
     Store, Mail, Lock, User, Phone, MapPin,
     Loader2, Sparkles, Shield,
     CheckCircle2, AlertCircle, RefreshCw, Sun, Moon,
+    Key, Building2, UserCheck, ChevronRight,
 } from 'lucide-react';
 
-// ─── Theme hook — detects OS preference, allows manual override ───────────────
+// ─── Theme hook ────────────────────────────────────────────────────────────────
 type ThemeMode = 'auto' | 'dark' | 'light';
 
 function useTheme() {
@@ -23,23 +24,14 @@ function useTheme() {
         const saved = localStorage.getItem('neo-auth-theme-mode') as ThemeMode | null;
         const savedMode = saved === 'auto' || saved === 'dark' || saved === 'light' ? saved : 'auto';
         setMode(savedMode);
-
         const mq = window.matchMedia('(prefers-color-scheme: dark)');
-        
         const updateTheme = () => {
-            if (savedMode === 'auto') {
-                setTheme(mq.matches ? 'dark' : 'light');
-            } else {
-                setTheme(savedMode);
-            }
+            if (savedMode === 'auto') setTheme(mq.matches ? 'dark' : 'light');
+            else setTheme(savedMode);
         };
-
         updateTheme();
         setReady(true);
-
-        const handler = () => {
-            if (mode === 'auto') updateTheme();
-        };
+        const handler = () => { if (mode === 'auto') updateTheme(); };
         mq.addEventListener('change', handler);
         return () => mq.removeEventListener('change', handler);
     }, [mode]);
@@ -48,97 +40,63 @@ function useTheme() {
         const next: ThemeMode = mode === 'auto' ? 'light' : mode === 'light' ? 'dark' : 'auto';
         setMode(next);
         localStorage.setItem('neo-auth-theme-mode', next);
-        
         if (next === 'auto') {
             const mq = window.matchMedia('(prefers-color-scheme: dark)');
             setTheme(mq.matches ? 'dark' : 'light');
-        } else {
-            setTheme(next);
-        }
+        } else setTheme(next);
     };
 
     return { theme, mode, cycleMode, ready };
 }
 
-// ─── Design tokens per theme ─────────────────────────────────────────────────
+// ─── Design tokens ─────────────────────────────────────────────────────────────
 const T = {
     dark: {
-        bg: '#080B12',
-        panelBg: '#0D1019',
-        surface: 'rgba(255,255,255,0.025)',
-        surfaceHover: 'rgba(255,255,255,0.04)',
-        border: 'rgba(255,255,255,0.07)',
-        borderSoft: 'rgba(255,255,255,0.04)',
-        text: '#FFFFFF',
-        textSec: 'rgba(255,255,255,0.55)',
-        textMuted: 'rgba(255,255,255,0.30)',
-        inputBg: 'rgba(255,255,255,0.04)',
-        inputBorder: 'rgba(255,255,255,0.08)',
-        autofillBg: '#0D1019',
-        autofillText: '#ffffff',
+        bg: '#080B12', panelBg: '#0D1019',
+        surface: 'rgba(255,255,255,0.025)', surfaceHover: 'rgba(255,255,255,0.04)',
+        border: 'rgba(255,255,255,0.07)', borderSoft: 'rgba(255,255,255,0.04)',
+        text: '#FFFFFF', textSec: 'rgba(255,255,255,0.55)', textMuted: 'rgba(255,255,255,0.30)',
+        inputBg: 'rgba(255,255,255,0.04)', inputBorder: 'rgba(255,255,255,0.08)',
+        autofillBg: '#0D1019', autofillText: '#ffffff',
         scrollThumb: 'rgba(255,255,255,0.08)',
-        orb1: 'rgba(99,102,241,0.12)',
-        orb2: 'rgba(139,92,246,0.10)',
-        orb3: 'rgba(16,185,129,0.04)',
-        gridOpacity: 0.025,
-        noiseOpacity: 0.5,
-        toggleBg: 'rgba(255,255,255,0.06)',
-        toggleBorder: 'rgba(255,255,255,0.09)',
-        toggleColor: 'rgba(255,255,255,0.45)',
-        tabBarBg: 'rgba(255,255,255,0.04)',
-        tabBarBorder: 'rgba(255,255,255,0.06)',
-        storeCardBg: 'rgba(255,255,255,0.04)',
-        ghostBg: 'rgba(255,255,255,0.04)',
-        ghostBorder: 'rgba(255,255,255,0.08)',
-        rightBg: 'transparent',
-        cardShadow: 'none',
-        stepInactive: 'rgba(255,255,255,0.06)',
-        stepInactiveBorder: 'rgba(255,255,255,0.10)',
-        stepInactiveText: 'rgba(255,255,255,0.30)',
-        progressTrack: 'rgba(255,255,255,0.07)',
+        orb1: 'rgba(99,102,241,0.12)', orb2: 'rgba(139,92,246,0.10)', orb3: 'rgba(16,185,129,0.04)',
+        gridOpacity: 0.025, noiseOpacity: 0.5,
+        toggleBg: 'rgba(255,255,255,0.06)', toggleBorder: 'rgba(255,255,255,0.09)', toggleColor: 'rgba(255,255,255,0.45)',
+        tabBarBg: 'rgba(255,255,255,0.04)', tabBarBorder: 'rgba(255,255,255,0.06)',
+        storeCardBg: 'rgba(255,255,255,0.04)', ghostBg: 'rgba(255,255,255,0.04)', ghostBorder: 'rgba(255,255,255,0.08)',
+        rightBg: 'transparent', cardShadow: 'none',
+        stepInactive: 'rgba(255,255,255,0.06)', stepInactiveBorder: 'rgba(255,255,255,0.10)',
+        stepInactiveText: 'rgba(255,255,255,0.30)', progressTrack: 'rgba(255,255,255,0.07)',
+        typeCardBg: 'rgba(255,255,255,0.03)', typeCardBorder: 'rgba(255,255,255,0.07)',
+        typeCardHover: 'rgba(255,255,255,0.06)',
     },
     light: {
-        bg: '#F1F4FA',
-        panelBg: '#FFFFFF',
-        surface: '#FFFFFF',
-        surfaceHover: 'rgba(0,0,0,0.025)',
-        border: 'rgba(0,0,0,0.08)',
-        borderSoft: 'rgba(0,0,0,0.04)',
-        text: '#0F1117',
-        textSec: '#4B5563',
-        textMuted: '#9CA3AF',
-        inputBg: 'rgba(0,0,0,0.03)',
-        inputBorder: 'rgba(0,0,0,0.10)',
-        autofillBg: '#ffffff',
-        autofillText: '#0F1117',
+        bg: '#F1F4FA', panelBg: '#FFFFFF',
+        surface: '#FFFFFF', surfaceHover: 'rgba(0,0,0,0.025)',
+        border: 'rgba(0,0,0,0.08)', borderSoft: 'rgba(0,0,0,0.04)',
+        text: '#0F1117', textSec: '#4B5563', textMuted: '#9CA3AF',
+        inputBg: 'rgba(0,0,0,0.03)', inputBorder: 'rgba(0,0,0,0.10)',
+        autofillBg: '#ffffff', autofillText: '#0F1117',
         scrollThumb: 'rgba(0,0,0,0.12)',
-        orb1: 'rgba(99,102,241,0.07)',
-        orb2: 'rgba(139,92,246,0.06)',
-        orb3: 'rgba(16,185,129,0.04)',
-        gridOpacity: 0.04,
-        noiseOpacity: 0.2,
-        toggleBg: 'rgba(0,0,0,0.05)',
-        toggleBorder: 'rgba(0,0,0,0.09)',
-        toggleColor: '#6B7280',
-        tabBarBg: 'rgba(0,0,0,0.04)',
-        tabBarBorder: 'rgba(0,0,0,0.07)',
-        storeCardBg: 'rgba(0,0,0,0.03)',
-        ghostBg: 'rgba(0,0,0,0.04)',
-        ghostBorder: 'rgba(0,0,0,0.10)',
-        rightBg: 'rgba(241,244,250,0.6)',
-        cardShadow: '0 4px 32px rgba(0,0,0,0.08)',
-        stepInactive: 'rgba(0,0,0,0.05)',
-        stepInactiveBorder: 'rgba(0,0,0,0.10)',
-        stepInactiveText: '#9CA3AF',
-        progressTrack: 'rgba(0,0,0,0.08)',
+        orb1: 'rgba(99,102,241,0.07)', orb2: 'rgba(139,92,246,0.06)', orb3: 'rgba(16,185,129,0.04)',
+        gridOpacity: 0.04, noiseOpacity: 0.2,
+        toggleBg: 'rgba(0,0,0,0.05)', toggleBorder: 'rgba(0,0,0,0.09)', toggleColor: '#6B7280',
+        tabBarBg: 'rgba(0,0,0,0.04)', tabBarBorder: 'rgba(0,0,0,0.07)',
+        storeCardBg: 'rgba(0,0,0,0.03)', ghostBg: 'rgba(0,0,0,0.04)', ghostBorder: 'rgba(0,0,0,0.10)',
+        rightBg: 'rgba(241,244,250,0.6)', cardShadow: '0 4px 32px rgba(0,0,0,0.08)',
+        stepInactive: 'rgba(0,0,0,0.05)', stepInactiveBorder: 'rgba(0,0,0,0.10)',
+        stepInactiveText: '#9CA3AF', progressTrack: 'rgba(0,0,0,0.08)',
+        typeCardBg: 'rgba(0,0,0,0.02)', typeCardBorder: 'rgba(0,0,0,0.07)',
+        typeCardHover: 'rgba(0,0,0,0.04)',
     },
 } as const;
 
 type Tok = typeof T['dark'] | typeof T['light'];
-type AuthStep = 'auth' | 'verify-email' | 'create-store' | 'done' | 'forgot-password';
-type StoreCategory = 'food' | 'retail' | 'services' | 'other';
+// accountType: 'owner' = abre loja | 'staff' = funcionário com código de convite
+type AuthStep = 'auth' | 'verify-email' | 'create-store' | 'join-staff' | 'staff-pending' | 'done' | 'forgot-password';
+type AccountType = 'owner' | 'staff' | '';
 
-// ─── CSS builder — regenerated on theme change ─────────────────────────────
+// ─── CSS builder ───────────────────────────────────────────────────────────────
 function buildCSS(tk: Tok, isDark: boolean) {
     return `
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&family=DM+Mono:wght@400;500&display=swap');
@@ -251,12 +209,14 @@ function buildCSS(tk: Tok, isDark: boolean) {
 .tab-btn.inactive{background:transparent;color:var(--text-muted);}
 .tab-btn.inactive:hover{color:var(--text-sec);background:var(--surface-hov);}
 
-.store-type-card{
-  padding:16px;border-radius:16px;border:2px solid var(--border);background:${tk.storeCardBg};
-  cursor:pointer;transition:all .2s;text-align:center;position:relative;
+.type-card{
+  padding:18px 16px;border-radius:16px;border:1.5px solid ${tk.typeCardBorder};
+  background:${tk.typeCardBg};cursor:pointer;
+  transition:all .2s;text-align:left;position:relative;width:100%;
+  display:flex;align-items:center;gap:14px;
 }
-.store-type-card:hover{border-color:rgba(99,102,241,0.4);background:rgba(99,102,241,0.06);}
-.store-type-card.selected{border-color:var(--accent);background:rgba(99,102,241,0.10);box-shadow:0 0 0 3px rgba(99,102,241,0.10);}
+.type-card:hover{border-color:rgba(99,102,241,0.35);background:${tk.typeCardHover};}
+.type-card.selected{border-color:var(--accent);background:rgba(99,102,241,0.08);box-shadow:0 0 0 3px rgba(99,102,241,0.10);}
 
 .theme-toggle{
   position:fixed;top:20px;right:20px;z-index:100;
@@ -461,7 +421,7 @@ function StepIndicator({ steps, current, tk }: { steps: string[]; current: numbe
     );
 }
 
-// ─── Left panel — always dark ─────────────────────────────────────────────────
+// ─── Left panel ───────────────────────────────────────────────────────────────
 function LeftPanel() {
     const features = [
         { icon: ShoppingBag, label: 'Gestão de pedidos em tempo real', color: '#6366F1' },
@@ -483,7 +443,7 @@ function LeftPanel() {
                     <span style={{ color: 'rgba(255,255,255,0.9)' }}>com inteligência</span>
                 </h1>
                 <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.42)', lineHeight: 1.75, maxWidth: 340 }}>
-                    Plataforma completa para pequenos e médios negócios. Pedidos, entregas, estoque e muito mais num só lugar.
+                    Plataforma completa para restaurantes. Pedidos, entregas, estoque e muito mais num só lugar.
                 </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 28 }}>
                     {features.map(({ icon: Icon, label, color }) => (
@@ -513,7 +473,6 @@ function LeftPanel() {
 
 // ─── Forgot password ──────────────────────────────────────────────────────────
 function ForgotPasswordForm({ onBack }: { onBack: () => void }) {
-    // sub-step: 'email' → 'otp' → done (redirect to dashboard)
     const router = useRouter();
     const [subStep, setSubStep] = useState<'email' | 'otp'>('email');
     const [email, setEmail] = useState('');
@@ -528,43 +487,30 @@ function ForgotPasswordForm({ onBack }: { onBack: () => void }) {
         return () => clearInterval(t);
     }, [countdown]);
 
-    // Step 1 — request OTP via email
     const handleSendOtp = async (e: React.FormEvent) => {
         e.preventDefault(); setError('');
         if (!email.includes('@')) { setError('E-mail inválido'); return; }
         setLoading(true);
         try {
-            const { error } = await supabase.auth.signInWithOtp({
-                email,
-                options: { shouldCreateUser: false },
-            });
+            const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
             if (error) throw error;
-            setCountdown(60);
-            setSubStep('otp');
+            setCountdown(60); setSubStep('otp');
             toast.success('Código enviado! Verifique seu e-mail.');
         } catch (err: any) {
-            setError(err.message?.includes('not found') || err.message?.includes('user')
-                ? 'E-mail não cadastrado'
-                : err.message || 'Erro ao enviar código');
+            setError(err.message?.includes('not found') || err.message?.includes('user') ? 'E-mail não cadastrado' : err.message || 'Erro ao enviar código');
         } finally { setLoading(false); }
     };
 
-    // Step 2 — verify 6-digit OTP then go to dashboard
     const handleVerifyOtp = async () => {
         if (otp.length < 6) { setError('Digite o código completo'); return; }
         setLoading(true); setError('');
         try {
-            const { error } = await supabase.auth.verifyOtp({
-                email,
-                token: otp,
-                type: 'magiclink',
-            });
+            const { error } = await supabase.auth.verifyOtp({ email, token: otp, type: 'magiclink' });
             if (error) throw error;
             toast.success('Acesso confirmado! 🎉');
             router.push('/dashboard');
-        } catch (err: any) {
-            setError('Código inválido ou expirado');
-        } finally { setLoading(false); }
+        } catch { setError('Código inválido ou expirado'); }
+        finally { setLoading(false); }
     };
 
     const handleResend = async () => {
@@ -572,13 +518,11 @@ function ForgotPasswordForm({ onBack }: { onBack: () => void }) {
         try {
             const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: false } });
             if (error) throw error;
-            setCountdown(60);
-            toast.success('Novo código enviado!');
+            setCountdown(60); toast.success('Novo código enviado!');
         } catch { toast.error('Erro ao reenviar'); }
         finally { setLoading(false); }
     };
 
-    // ── Step 1: email ──
     if (subStep === 'email') {
         return (
             <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
@@ -587,28 +531,19 @@ function ForgotPasswordForm({ onBack }: { onBack: () => void }) {
                         <ArrowLeft size={13} />Voltar
                     </button>
                     <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 6, letterSpacing: '-0.3px' }}>Redefinir senha</h2>
-                    <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                        Informe seu e-mail. Enviaremos um código de 6 dígitos para confirmar seu acesso.
-                    </p>
+                    <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>Informe seu e-mail. Enviaremos um código de 6 dígitos para confirmar seu acesso.</p>
                 </div>
-                {error && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#FCA5A5', fontSize: 13 }}>
-                        <AlertCircle size={14} style={{ flexShrink: 0 }} />{error}
-                    </div>
-                )}
+                {error && <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#FCA5A5', fontSize: 13 }}><AlertCircle size={14} style={{ flexShrink: 0 }} />{error}</div>}
                 <form onSubmit={handleSendOtp} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     <IconInput icon={Mail} label="E-mail" type="email" placeholder="seu@email.com" value={email} onChange={setEmail} required />
                     <button type="submit" className="btn-primary" disabled={loading}>
-                        {loading
-                            ? <><Loader2 size={16} style={{ animation: 'spin-slow 1s linear infinite' }} />Enviando...</>
-                            : <><Mail size={15} />Enviar código</>}
+                        {loading ? <><Loader2 size={16} style={{ animation: 'spin-slow 1s linear infinite' }} />Enviando...</> : <><Mail size={15} />Enviar código</>}
                     </button>
                 </form>
             </div>
         );
     }
 
-    // ── Step 2: OTP ──
     return (
         <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 24, alignItems: 'center', textAlign: 'center' }}>
             <div style={{ width: 64, height: 64, borderRadius: 20, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
@@ -619,23 +554,14 @@ function ForgotPasswordForm({ onBack }: { onBack: () => void }) {
             </div>
             <div>
                 <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 8, letterSpacing: '-0.3px' }}>Digite o código</h2>
-                <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                    Código de 6 dígitos enviado para<br />
-                    <span style={{ color: '#a5b4fc', fontWeight: 600 }}>{email}</span>
-                </p>
+                <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>Código de 6 dígitos enviado para<br /><span style={{ color: '#a5b4fc', fontWeight: 600 }}>{email}</span></p>
             </div>
             <div style={{ width: '100%' }}>
                 <OTPInput value={otp} onChange={v => { setOtp(v); setError(''); }} length={6} />
-                {error && (
-                    <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: '#FCA5A5', fontSize: 13 }}>
-                        <AlertCircle size={13} />{error}
-                    </div>
-                )}
+                {error && <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: '#FCA5A5', fontSize: 13 }}><AlertCircle size={13} />{error}</div>}
             </div>
             <button className="btn-primary" onClick={handleVerifyOtp} disabled={loading || otp.length < 6} style={{ width: '100%' }}>
-                {loading
-                    ? <><Loader2 size={16} style={{ animation: 'spin-slow 1s linear infinite' }} />Verificando...</>
-                    : <><Shield size={16} />Confirmar e entrar</>}
+                {loading ? <><Loader2 size={16} style={{ animation: 'spin-slow 1s linear infinite' }} />Verificando...</> : <><Shield size={16} />Confirmar e entrar</>}
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
                 <span style={{ color: 'var(--text-muted)' }}>Não recebeu?</span>
@@ -709,7 +635,11 @@ function LoginForm({ onSwitchToRegister, onForgotPassword }: { onSwitchToRegiste
 }
 
 // ─── Register ─────────────────────────────────────────────────────────────────
-function RegisterForm({ onSwitchToLogin, onSuccess }: { onSwitchToLogin: () => void; onSuccess: (email: string) => void }) {
+function RegisterForm({ onSwitchToLogin, onSuccess }: {
+    onSwitchToLogin: () => void;
+    onSuccess: (email: string, accountType: AccountType) => void;
+}) {
+    const [accountType, setAccountType] = useState<AccountType>('');
     const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -717,6 +647,7 @@ function RegisterForm({ onSwitchToLogin, onSuccess }: { onSwitchToLogin: () => v
 
     const validate = () => {
         const e: Record<string, string> = {};
+        if (!accountType) e.accountType = 'Selecione um tipo de conta';
         if (!form.name.trim()) e.name = 'Nome obrigatório';
         if (!form.email.includes('@')) e.email = 'E-mail inválido';
         if (form.password.length < 8) e.password = 'Mínimo 8 caracteres';
@@ -734,10 +665,13 @@ function RegisterForm({ onSwitchToLogin, onSuccess }: { onSwitchToLogin: () => v
         try {
             const { error } = await supabase.auth.signUp({
                 email: form.email, password: form.password,
-                options: { data: { name: form.name }, emailRedirectTo: `${window.location.origin}/auth/callback` },
+                options: {
+                    data: { name: form.name, account_type: accountType },
+                    emailRedirectTo: `${window.location.origin}/auth/callback`,
+                },
             });
             if (error) throw error;
-            onSuccess(form.email);
+            onSuccess(form.email, accountType);
         } catch (err: any) {
             setErrors({ submit: err.message?.includes('already registered') ? 'E-mail já cadastrado' : err.message || 'Erro ao cadastrar' });
         } finally { setLoading(false); }
@@ -752,7 +686,44 @@ function RegisterForm({ onSwitchToLogin, onSuccess }: { onSwitchToLogin: () => v
                     <button onClick={onSwitchToLogin} style={{ background: 'none', border: 'none', color: '#818CF8', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Entrar →</button>
                 </p>
             </div>
+
+            {/* Seleção de tipo de conta */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <label style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
+                    Tipo de conta{errors.accountType && <span style={{ color: '#FCA5A5', marginLeft: 8, textTransform: 'none', fontSize: 11 }}>— {errors.accountType}</span>}
+                </label>
+                <button
+                    type="button"
+                    className={`type-card${accountType === 'owner' ? ' selected' : ''}`}
+                    onClick={() => { setAccountType('owner'); setErrors(p => ({ ...p, accountType: '' })); }}
+                >
+                    <div style={{ width: 40, height: 40, borderRadius: 12, background: accountType === 'owner' ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.08)', border: `1px solid ${accountType === 'owner' ? 'rgba(99,102,241,0.5)' : 'rgba(99,102,241,0.15)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all .2s' }}>
+                        <Building2 size={18} color={accountType === 'owner' ? '#818CF8' : 'var(--text-muted)'} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: 14, fontWeight: 700, color: accountType === 'owner' ? '#a5b4fc' : 'var(--text)', marginBottom: 2 }}>Sou dono de restaurante</p>
+                        <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Criar e gerenciar meu negócio</p>
+                    </div>
+                    <ChevronRight size={16} color={accountType === 'owner' ? '#818CF8' : 'var(--text-muted)'} style={{ flexShrink: 0, transition: 'transform .2s', transform: accountType === 'owner' ? 'translateX(2px)' : 'none' }} />
+                </button>
+                <button
+                    type="button"
+                    className={`type-card${accountType === 'staff' ? ' selected' : ''}`}
+                    onClick={() => { setAccountType('staff'); setErrors(p => ({ ...p, accountType: '' })); }}
+                >
+                    <div style={{ width: 40, height: 40, borderRadius: 12, background: accountType === 'staff' ? 'rgba(16,185,129,0.2)' : 'rgba(16,185,129,0.08)', border: `1px solid ${accountType === 'staff' ? 'rgba(16,185,129,0.5)' : 'rgba(16,185,129,0.15)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all .2s' }}>
+                        <UserCheck size={18} color={accountType === 'staff' ? '#34D399' : 'var(--text-muted)'} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: 14, fontWeight: 700, color: accountType === 'staff' ? '#6EE7B7' : 'var(--text)', marginBottom: 2 }}>Sou funcionário</p>
+                        <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Entrar em uma equipe com código de convite</p>
+                    </div>
+                    <ChevronRight size={16} color={accountType === 'staff' ? '#34D399' : 'var(--text-muted)'} style={{ flexShrink: 0, transition: 'transform .2s', transform: accountType === 'staff' ? 'translateX(2px)' : 'none' }} />
+                </button>
+            </div>
+
             {errors.submit && <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#FCA5A5', fontSize: 13 }}><AlertCircle size={14} style={{ flexShrink: 0 }} />{errors.submit}</div>}
+
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <IconInput icon={User} label="Nome completo" placeholder="João Silva" value={form.name} onChange={set('name')} required error={errors.name} />
                 <IconInput icon={Mail} label="E-mail" type="email" placeholder="seu@email.com" value={form.email} onChange={set('email')} required error={errors.email} />
@@ -843,26 +814,18 @@ function VerifyEmailForm({ email, onVerified, tk }: { email: string; onVerified:
     );
 }
 
-// ─── Create store ─────────────────────────────────────────────────────────────
-const STORE_CATS = [
-    { id: 'food', label: 'Alimentação', icon: '🍕', desc: 'Restaurante, lanche, delivery' },
-    { id: 'retail', label: 'Varejo', icon: '🛍️', desc: 'Loja, produtos físicos' },
-    { id: 'services', label: 'Serviços', icon: '✂️', desc: 'Salão, oficina, estética' },
-    { id: 'other', label: 'Outro', icon: '📦', desc: 'Outro tipo de negócio' },
-];
-
+// ─── Create Store (sem seleção de categoria — NeoDelivery é focado em restaurantes) ──
 function CreateStoreForm({ onSuccess, tk }: { onSuccess: () => void; tk: Tok }) {
     const [step, setStep] = useState(0);
-    const [form, setForm] = useState({ name: '', phone: '', category: '' as StoreCategory | '', address: '', city: '', state: '' });
+    const [form, setForm] = useState({ name: '', phone: '', address: '', city: '', state: '' });
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const set = (k: keyof typeof form) => (v: string) => setForm(f => ({ ...f, [k]: v }));
-    const stepsLabels = ['Categoria', 'Dados', 'Endereço'];
+    const stepsLabels = ['Dados', 'Endereço'];
 
     const next = () => {
         const e: Record<string, string> = {};
-        if (step === 0 && !form.category) e.category = 'Selecione uma categoria';
-        if (step === 1 && !form.name.trim()) e.name = 'Nome obrigatório';
+        if (step === 0 && !form.name.trim()) e.name = 'Nome obrigatório';
         if (Object.keys(e).length) { setErrors(e); return; }
         setErrors({}); setStep(s => s + 1);
     };
@@ -881,48 +844,27 @@ function CreateStoreForm({ onSuccess, tk }: { onSuccess: () => void; tk: Tok }) 
                 state: form.state || null,
             });
             if (error) throw error;
-            toast.success('Loja criada com sucesso! 🎉');
+            toast.success('Restaurante criado com sucesso! 🎉');
             onSuccess();
-        } catch (err: any) { toast.error(err.message || 'Erro ao criar loja'); }
+        } catch (err: any) { toast.error(err.message || 'Erro ao criar restaurante'); }
         finally { setLoading(false); }
     };
 
     return (
         <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
             <div>
-                <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 4, letterSpacing: '-0.3px' }}>Criar sua loja</h2>
-                <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Configure seu negócio em 3 passos simples</p>
+                <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 4, letterSpacing: '-0.3px' }}>Criar seu restaurante</h2>
+                <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Configure seu negócio em 2 passos</p>
             </div>
             <StepIndicator steps={stepsLabels} current={step} tk={tk} />
-            <div style={{ minHeight: 220 }}>
+            <div style={{ minHeight: 200 }}>
                 {step === 0 && (
-                    <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-sec)' }}>Qual é o tipo do seu negócio?</p>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                            {STORE_CATS.map(cat => (
-                                <div key={cat.id} className={`store-type-card${form.category === cat.id ? ' selected' : ''}`}
-                                    onClick={() => setForm(f => ({ ...f, category: cat.id as StoreCategory }))}>
-                                    <div style={{ fontSize: 26, marginBottom: 6 }}>{cat.icon}</div>
-                                    <div style={{ fontSize: 13, fontWeight: 700, color: form.category === cat.id ? '#a5b4fc' : 'var(--text-sec)' }}>{cat.label}</div>
-                                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{cat.desc}</div>
-                                    {form.category === cat.id && (
-                                        <div style={{ position: 'absolute', top: 8, right: 8, width: 18, height: 18, borderRadius: '50%', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                            <Check size={10} color="white" />
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                        {errors.category && <p style={{ fontSize: 12, color: '#FCA5A5', display: 'flex', alignItems: 'center', gap: 4 }}><AlertCircle size={12} />{errors.category}</p>}
-                    </div>
-                )}
-                {step === 1 && (
                     <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                        <IconInput icon={Store} label="Nome da loja" placeholder="Ex: Pizzaria do João" value={form.name} onChange={set('name')} required error={errors.name} />
+                        <IconInput icon={Store} label="Nome do restaurante" placeholder="Ex: Pizzaria do João" value={form.name} onChange={set('name')} required error={errors.name} />
                         <IconInput icon={Phone} label="Telefone / WhatsApp" placeholder="(00) 00000-0000" value={form.phone} onChange={set('phone')} />
                     </div>
                 )}
-                {step === 2 && (
+                {step === 1 && (
                     <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                         <IconInput icon={MapPin} label="Endereço" placeholder="Rua das Flores, 123" value={form.address} onChange={set('address')} hint="Opcional — pode preencher depois" />
                         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10 }}>
@@ -934,13 +876,11 @@ function CreateStoreForm({ onSuccess, tk }: { onSuccess: () => void; tk: Tok }) 
                         </div>
                         {form.name && (
                             <div style={{ padding: '14px 16px', borderRadius: 14, background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', display: 'flex', alignItems: 'center', gap: 12 }}>
-                                <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
-                                    {STORE_CATS.find(c => c.id === form.category)?.icon}
-                                </div>
+                                <div style={{ width: 40, height: 40, borderRadius: 12, background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>🍽️</div>
                                 <div>
                                     <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{form.name}</p>
                                     <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                                        {STORE_CATS.find(c => c.id === form.category)?.label}{form.city && ` · ${form.city}${form.state ? `/${form.state}` : ''}`}
+                                        Restaurante{form.city && ` · ${form.city}${form.state ? `/${form.state}` : ''}`}
                                     </p>
                                 </div>
                                 <CheckCircle2 size={18} color="#10B981" style={{ marginLeft: 'auto', flexShrink: 0 }} />
@@ -954,14 +894,155 @@ function CreateStoreForm({ onSuccess, tk }: { onSuccess: () => void; tk: Tok }) 
                 {step < stepsLabels.length - 1
                     ? <button className="btn-primary" style={{ flex: 2 }} onClick={next}>Próximo <ArrowRight size={15} /></button>
                     : <button className="btn-primary" style={{ flex: step > 0 ? 2 : 1 }} onClick={handleFinish} disabled={loading}>
-                        {loading ? <><Loader2 size={16} style={{ animation: 'spin-slow 1s linear infinite' }} />Criando...</> : <><Sparkles size={16} />Criar loja!</>}
+                        {loading ? <><Loader2 size={16} style={{ animation: 'spin-slow 1s linear infinite' }} />Criando...</> : <><Sparkles size={16} />Criar restaurante!</>}
                     </button>}
             </div>
         </div>
     );
 }
 
-// ─── Success screen ───────────────────────────────────────────────────────────
+// ─── Join as Staff — formulário de código de convite ─────────────────────────
+function JoinAsStaffForm({ onSuccess, tk }: { onSuccess: () => void; tk: Tok }) {
+    const [form, setForm] = useState({ invite_code: '', display_name: '' });
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+
+        if (!form.invite_code.trim()) { setError('Informe o código de convite'); return; }
+
+        setLoading(true);
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error('Não autenticado');
+
+            const res = await fetch(
+                `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/staff-request-join`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${session.access_token}`,
+                    },
+                    body: JSON.stringify({
+                        invite_code: form.invite_code.trim().toUpperCase(),
+                        display_name: form.display_name.trim() || null,
+                    }),
+                }
+            );
+
+            const data = await res.json();
+            if (!res.ok || !data.success) throw new Error(data.error || 'Erro ao enviar solicitação');
+
+            toast.success('Solicitação enviada com sucesso!');
+            onSuccess();
+        } catch (err: any) {
+            setError(err.message || 'Erro ao enviar solicitação');
+        } finally { setLoading(false); }
+    };
+
+    return (
+        <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+            <div>
+                <h2 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 4, letterSpacing: '-0.3px' }}>Entrar na equipe</h2>
+                <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                    Use o código de convite fornecido pelo administrador do restaurante.
+                </p>
+            </div>
+
+            {/* Instrução visual */}
+            <div style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.18)', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                <Key size={15} color="#34D399" style={{ marginTop: 1, flexShrink: 0 }} />
+                <p style={{ fontSize: 12, color: 'rgba(16,185,129,0.8)', lineHeight: 1.6 }}>
+                    Peça ao administrador o <strong style={{ color: '#34D399' }}>código de convite</strong>. Ele fica disponível na dashboard do restaurante.
+                </p>
+            </div>
+
+            {error && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 12, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#FCA5A5', fontSize: 13 }}>
+                    <AlertCircle size={14} style={{ flexShrink: 0 }} />{error}
+                </div>
+            )}
+
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <label style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>
+                        Código de convite <span style={{ color: '#EF4444' }}>*</span>
+                    </label>
+                    <div style={{ position: 'relative' }}>
+                        <div style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', display: 'flex' }}>
+                            <Key size={15} color="var(--text-muted)" />
+                        </div>
+                        <input
+                            className="input-field input-with-icon"
+                            placeholder="Ex: INV-K8XM2QP1"
+                            value={form.invite_code}
+                            onChange={e => setForm(f => ({ ...f, invite_code: e.target.value.toUpperCase() }))}
+                            style={{ fontFamily: "'DM Mono', monospace", letterSpacing: '0.05em' }}
+                        />
+                    </div>
+                </div>
+                <IconInput
+                    icon={User}
+                    label="Como quer ser chamado? (opcional)"
+                    placeholder="Ex: João (Garçom)"
+                    value={form.display_name}
+                    onChange={v => setForm(f => ({ ...f, display_name: v }))}
+                    hint="Nome que aparecerá nos pedidos"
+                />
+                <button type="submit" className="btn-primary" disabled={loading} style={{ background: 'linear-gradient(135deg,#10B981,#059669)', boxShadow: '0 4px 20px rgba(16,185,129,0.35)' }}>
+                    {loading ? <><Loader2 size={16} style={{ animation: 'spin-slow 1s linear infinite' }} />Enviando...</> : <><UserCheck size={16} />Enviar solicitação</>}
+                </button>
+            </form>
+        </div>
+    );
+}
+
+// ─── Staff pending screen ─────────────────────────────────────────────────────
+function StaffPendingScreen() {
+    const router = useRouter();
+    return (
+        <div className="fade-up" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 24, padding: '20px 0' }}>
+            <div style={{ position: 'relative' }}>
+                <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'linear-gradient(135deg,#F59E0B,#D97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'step-pop .5s ease both', boxShadow: '0 8px 32px rgba(245,158,11,0.4)' }}>
+                    <UserCheck size={36} color="white" strokeWidth={2.5} />
+                </div>
+                <div style={{ position: 'absolute', inset: -8, borderRadius: '50%', border: '2px solid rgba(245,158,11,0.15)' }} />
+            </div>
+            <div>
+                <h2 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>Solicitação enviada! 🎉</h2>
+                <p style={{ fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.7, maxWidth: 300 }}>
+                    Sua solicitação foi enviada ao administrador.<br />
+                    Você receberá acesso assim que ele aprovar.
+                </p>
+            </div>
+            <div style={{ padding: '14px 18px', borderRadius: 14, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', width: '100%', textAlign: 'left' }}>
+                <p style={{ fontSize: 12, fontWeight: 700, color: '#FCD34D', marginBottom: 4 }}>O que acontece agora?</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {[
+                        'O admin recebe uma notificação',
+                        'Ele aprova sua solicitação na dashboard',
+                        'Você recebe acesso e pode fazer login',
+                    ].map((txt, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                            <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(245,158,11,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                                <span style={{ fontSize: 9, fontWeight: 800, color: '#FCD34D' }}>{i + 1}</span>
+                            </div>
+                            <p style={{ fontSize: 12, color: 'rgba(245,158,11,0.7)', lineHeight: 1.5 }}>{txt}</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+            <button onClick={() => router.push('/')} className="btn-ghost" style={{ width: '100%' }}>
+                <ArrowLeft size={15} />Voltar para o login
+            </button>
+        </div>
+    );
+}
+
+// ─── Success screen (owner) ───────────────────────────────────────────────────
 function SuccessScreen() {
     const router = useRouter();
     const [countdown, setCountdown] = useState(5);
@@ -986,9 +1067,8 @@ function SuccessScreen() {
             </div>
             <div>
                 <h2 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>Tudo pronto! 🎉</h2>
-                <p style={{ fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.6 }}>Sua loja foi criada com sucesso.<br />Você será redirecionado em instantes.</p>
+                <p style={{ fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.6 }}>Seu restaurante foi criado com sucesso.<br />Você será redirecionado em instantes.</p>
             </div>
-            {/* Countdown ring */}
             <div style={{ position: 'relative', width: 72, height: 72, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <svg width="72" height="72" style={{ position: 'absolute', inset: 0, transform: 'rotate(-90deg)' }}>
                     <circle cx="36" cy="36" r={r} fill="none" stroke="rgba(99,102,241,0.12)" strokeWidth="4" />
@@ -1015,12 +1095,20 @@ function SuccessScreen() {
 }
 
 // ─── Progress header ──────────────────────────────────────────────────────────
-function ProgressHeader({ step, tk }: { step: AuthStep; tk: Tok }) {
-    const pct: Record<AuthStep, number> = { auth: 25, 'verify-email': 60, 'create-store': 88, done: 100, 'forgot-password': 25 };
-    const labels = ['Conta', 'Verificação', 'Loja', 'Pronto!'];
+function ProgressHeader({ step, accountType, tk }: { step: AuthStep; accountType: AccountType; tk: Tok }) {
+    const isStaff = accountType === 'staff';
+
+    // Owner: Conta → Verificação → Restaurante → Pronto
+    // Staff:  Conta → Verificação → Equipe → Aguardando
+    const ownerPct: Record<AuthStep, number> = { auth: 25, 'verify-email': 55, 'create-store': 82, done: 100, 'forgot-password': 25, 'join-staff': 82, 'staff-pending': 100 };
+    const staffPct: Record<AuthStep, number> = { auth: 25, 'verify-email': 55, 'join-staff': 82, 'staff-pending': 100, done: 100, 'forgot-password': 25, 'create-store': 82 };
+
+    const pct = isStaff ? staffPct[step] : ownerPct[step];
+    const labels = isStaff ? ['Conta', 'Verificação', 'Equipe', 'Aguardando'] : ['Conta', 'Verificação', 'Restaurante', 'Pronto!'];
+
     return (
         <div style={{ width: '100%', maxWidth: 420, marginBottom: 20 }}>
-            <div className="progress-bar"><div className="progress-fill" style={{ width: `${pct[step]}%` }} /></div>
+            <div className="progress-bar"><div className="progress-fill" style={{ width: `${pct}%` }} /></div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 10, fontWeight: 600, color: tk.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 {labels.map(l => <span key={l}>{l}</span>)}
             </div>
@@ -1038,6 +1126,7 @@ export default function AuthPage() {
     const [step, setStep] = useState<AuthStep>('auth');
     const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
     const [regEmail, setRegEmail] = useState('');
+    const [accountType, setAccountType] = useState<AccountType>('');
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
@@ -1045,21 +1134,17 @@ export default function AuthPage() {
         });
     }, []);
 
-    // Atualiza theme-color para iOS
     useEffect(() => {
         const bgColor = theme === 'dark' ? '#080B12' : '#F1F4FA';
         let metaThemeColor = document.querySelector('meta[name="theme-color"]');
-        
         if (!metaThemeColor) {
             metaThemeColor = document.createElement('meta');
             metaThemeColor.setAttribute('name', 'theme-color');
             document.head.appendChild(metaThemeColor);
         }
-        
         metaThemeColor.setAttribute('content', bgColor);
     }, [theme]);
 
-    // Prevent flash of wrong theme before hydration
     if (!ready) return null;
 
     const css = buildCSS(tk, isDark);
@@ -1076,11 +1161,25 @@ export default function AuthPage() {
         return 'Escuro';
     };
 
+    const handleRegisterSuccess = (email: string, type: AccountType) => {
+        setRegEmail(email);
+        setAccountType(type);
+        setStep('verify-email');
+    };
+
+    const handleEmailVerified = () => {
+        // Redireciona baseado no tipo de conta escolhido
+        if (accountType === 'staff') setStep('join-staff');
+        else setStep('create-store');
+    };
+
     const rightContent = () => {
         if (step === 'done') return <SuccessScreen />;
+        if (step === 'staff-pending') return <StaffPendingScreen />;
         if (step === 'forgot-password') return <ForgotPasswordForm onBack={() => setStep('auth')} />;
-        if (step === 'verify-email') return <VerifyEmailForm email={regEmail} onVerified={() => setStep('create-store')} tk={tk} />;
+        if (step === 'verify-email') return <VerifyEmailForm email={regEmail} onVerified={handleEmailVerified} tk={tk} />;
         if (step === 'create-store') return <CreateStoreForm onSuccess={() => setStep('done')} tk={tk} />;
+        if (step === 'join-staff') return <JoinAsStaffForm onSuccess={() => setStep('staff-pending')} tk={tk} />;
         return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
                 <div className="tab-bar">
@@ -1089,7 +1188,7 @@ export default function AuthPage() {
                 </div>
                 {activeTab === 'login'
                     ? <LoginForm onSwitchToRegister={() => setActiveTab('register')} onForgotPassword={() => setStep('forgot-password')} />
-                    : <RegisterForm onSwitchToLogin={() => setActiveTab('login')} onSuccess={email => { setRegEmail(email); setStep('verify-email'); }} />}
+                    : <RegisterForm onSwitchToLogin={() => setActiveTab('login')} onSuccess={handleRegisterSuccess} />}
             </div>
         );
     };
@@ -1100,7 +1199,7 @@ export default function AuthPage() {
             <div className="auth-root noise-bg theme-in" style={{ display: 'flex', minHeight: '100vh', position: 'relative' }}>
                 <GridBackground tk={tk} />
 
-                {/* ── Theme toggle ── */}
+                {/* Theme toggle */}
                 <button className="theme-toggle" onClick={cycleMode} title={`Tema: ${getThemeLabel()}`}
                     style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, width: 48, height: 48 }}>
                     <span style={{ fontSize: 16 }}>{getThemeIcon()}</span>
@@ -1109,28 +1208,28 @@ export default function AuthPage() {
 
                 <div style={{ flex: 1, display: 'flex', alignItems: 'stretch', position: 'relative', zIndex: 1, minHeight: '100vh' }}>
 
-                    {/* ── Left panel — always dark, desktop only ── */}
+                    {/* Left panel */}
                     <div className="desktop-left" style={{ width: '45%', maxWidth: 480, flexShrink: 0, display: 'flex', alignItems: 'stretch', borderRight: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.08)'}` }}>
                         <LeftPanel />
                     </div>
 
-                    {/* ── Right panel ── */}
+                    {/* Right panel */}
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px', background: tk.rightBg, transition: 'background .3s' }}>
 
-                        {/* Mobile logo — hidden on desktop via CSS */}
+                        {/* Mobile logo */}
                         <div style={{ marginBottom: 24, display: 'none' }} className="mobile-logo">
                             <Logo size="md" />
                         </div>
 
-                        {/* Progress bar (after register) */}
-                        {regEmail && <ProgressHeader step={step} tk={tk} />}
+                        {/* Progress bar (após registro) */}
+                        {regEmail && <ProgressHeader step={step} accountType={accountType} tk={tk} />}
 
-                        {/* Main card */}
+                        {/* Card principal */}
                         <div className="glass-card" style={{ width: '100%', maxWidth: 420, padding: '32px' }}>
                             {rightContent()}
                         </div>
 
-                        {/* Footer links */}
+                        {/* Footer */}
                         {step === 'auth' && (
                             <div style={{ marginTop: 18, display: 'flex', gap: 14, flexWrap: 'wrap', justifyContent: 'center' }}>
                                 {['Termos de Uso', 'Privacidade', 'Suporte'].map(link => (
