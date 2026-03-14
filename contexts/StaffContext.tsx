@@ -90,7 +90,7 @@ export function StaffProvider({ children, storeId }: { children: ReactNode; stor
         setUserRole('staff');
         setStaffInfo({ id: member.id, store_id: member.store_id, user_id: member.user_id,
           status: member.status, display_name: member.display_name,
-          role: (member.role as StaffRole) ?? null });
+          role: (member.role as unknown as StaffRole) ?? null });
       } else { setUserRole(null); setStaffInfo(null); }
     } finally { setLoading(false); }
   };
