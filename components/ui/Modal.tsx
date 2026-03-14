@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import { ReactNode } from 'react';
+import { COLORS, ALPHA } from '@/lib/constants';
 
 
 
@@ -12,7 +13,7 @@ export function ModalBackdrop({ onClose, children }: ModalBackdropProps) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)' }}
+      style={{ background: ALPHA.overlayLight, backdropFilter: ALPHA.backdropBlur }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       {children}
@@ -47,7 +48,7 @@ interface ModalHeaderProps {
   onClose: () => void;
 }
 
-export function ModalHeader({ title, subtitle, icon: Icon, iconColor = '#6366F1', onClose }: ModalHeaderProps) {
+export function ModalHeader({ title, subtitle, icon: Icon, iconColor = COLORS.accent, onClose }: ModalHeaderProps) {
   return (
     <div className="flex items-center justify-between px-6 py-4 shrink-0 border-b border-[var(--border)]">
       <div className="flex items-center gap-3">

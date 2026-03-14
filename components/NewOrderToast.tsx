@@ -3,11 +3,12 @@ import { useEffect, useState } from 'react';
 import { ShoppingCart, X, Truck, Package, UtensilsCrossed, ChevronRight } from 'lucide-react';
 import { NewOrderNotification } from '@/hooks/useNewOrderNotification';
 import { formatCurrency } from '@/lib/utils/format';
+import { COLORS, ALPHA } from '@/lib/constants';
 
 const ORDER_TYPE_CONFIG: Record<string, { icon: React.FC<any>; label: string; color: string }> = {
-  delivery: { icon: Truck, label: 'Entrega', color: '#6366F1' },
-  pickup: { icon: Package, label: 'Retirada', color: '#10B981' },
-  table: { icon: UtensilsCrossed, label: 'No Local', color: '#F59E0B' },
+  delivery: { icon: Truck,            label: 'Entrega',  color: COLORS.accent },
+  pickup:   { icon: Package,          label: 'Retirada', color: COLORS.success },
+  table:    { icon: UtensilsCrossed,  label: 'No Local', color: COLORS.warning },
 };
 
 interface NewOrderToastProps {
@@ -41,9 +42,9 @@ function SingleToast({ notification, onDismiss, onViewOrder }: NewOrderToastProp
         opacity: visible && !leaving ? 1 : 0,
         transition: 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease',
         background: 'linear-gradient(135deg, #0F1117 0%, #161b27 100%)',
-        border: '1px solid rgba(99,102,241,0.35)',
+        border: `1px solid ${ALPHA.accentBorderStr}`,
         borderRadius: 16,
-        boxShadow: '0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(99,102,241,0.1)',
+        boxShadow: `0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px ${ALPHA.accentBgSubtleD}`,
         padding: '14px 16px',
         width: 320,
         position: 'relative',
@@ -56,7 +57,7 @@ function SingleToast({ notification, onDismiss, onViewOrder }: NewOrderToastProp
           top: 0,
           left: 0,
           height: 2,
-          background: `linear-gradient(90deg, ${typeConfig.color}, #8B5CF6)`,
+          background: `linear-gradient(90deg, ${typeConfig.color}, ${COLORS.purple})`,
           borderRadius: '16px 16px 0 0',
           animation: 'progress-shrink 8s linear forwards',
         }}
@@ -124,7 +125,7 @@ function SingleToast({ notification, onDismiss, onViewOrder }: NewOrderToastProp
             </div>
           </div>
 
-          <p style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 2 }}>
+          <p style={{ fontSize: 13, fontWeight: 700, color: COLORS.white, marginBottom: 2 }}>
             #{notification.orderNumber} · {notification.customerName}
           </p>
           <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginBottom: 10 }}>
@@ -149,7 +150,7 @@ function SingleToast({ notification, onDismiss, onViewOrder }: NewOrderToastProp
                 borderRadius: 8,
                 background: `linear-gradient(135deg, ${typeConfig.color}, ${typeConfig.color}cc)`,
                 border: 'none',
-                color: '#fff',
+                color: COLORS.white,
                 fontSize: 11,
                 fontWeight: 700,
                 cursor: 'pointer',

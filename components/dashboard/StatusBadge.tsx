@@ -1,15 +1,16 @@
 import { useTheme } from '@/contexts/ThemeContext';
 import { STATUS_MAP } from '@/lib/constants/status';
+import { COLORS, ALPHA } from '@/lib/constants';
 
 export function StatusBadge({ status }: { status: string }) {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const cfg = STATUS_MAP[status] ?? { 
     label: status, 
-    dot: '#6B7280', 
-    bgD: 'rgba(107,114,128,0.15)', 
-    bgL: 'rgba(107,114,128,0.1)', 
-    txD: '#D1D5DB', 
+    dot: COLORS.neutral, 
+    bgD: ALPHA.neutralBg, 
+    bgL: ALPHA.neutralBg, 
+    txD: COLORS.neutralSoft, 
     txL: '#374151' 
   };
   

@@ -3,13 +3,14 @@ import { useRouter } from 'next/router';
 import { Clock, ShieldAlert, UserX, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useStaff } from '@/contexts/StaffContext';
+import { COLORS, ALPHA } from '@/lib/constants';
 
 const CONFIG = {
   pending: {
     icon: Clock,
-    color: '#F59E0B',
-    bg: 'rgba(245,158,11,0.1)',
-    border: 'rgba(245,158,11,0.2)',
+    color: COLORS.warning,
+    bg: ALPHA.warningBgSubtle,
+    border: ALPHA.warningBorder,
     title: 'Aguardando aprovação',
     description: 'Sua solicitação foi enviada ao administrador da loja. Você será notificado assim que for aprovado.',
     steps: [
@@ -20,18 +21,18 @@ const CONFIG = {
   },
   suspended: {
     icon: ShieldAlert,
-    color: '#EF4444',
-    bg: 'rgba(239,68,68,0.1)',
-    border: 'rgba(239,68,68,0.2)',
+    color: COLORS.danger,
+    bg: ALPHA.dangerBgSubtle,
+    border: ALPHA.dangerBorder,
     title: 'Acesso suspenso',
     description: 'Seu acesso a esta loja foi suspenso. Entre em contato com o administrador para mais informações.',
     steps: [],
   },
   rejected: {
     icon: UserX,
-    color: '#6B7280',
-    bg: 'rgba(107,114,128,0.1)',
-    border: 'rgba(107,114,128,0.2)',
+    color: COLORS.neutral,
+    bg: ALPHA.neutralBg,
+    border: ALPHA.neutralBorder,
     title: 'Solicitação rejeitada',
     description: 'Sua solicitação de acesso foi rejeitada. Entre em contato com o administrador da loja.',
     steps: [],

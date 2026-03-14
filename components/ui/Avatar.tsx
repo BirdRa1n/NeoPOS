@@ -1,4 +1,6 @@
-const PALETTE = ['#6366F1', '#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#3B82F6', '#EF4444', '#14B8A6'];
+import { COLORS } from '@/lib/constants';
+
+const PALETTE = [COLORS.accent, COLORS.purple, COLORS.pink, COLORS.success, COLORS.warning, COLORS.info, COLORS.danger, COLORS.teal];
 
 function getAvatarColor(name: string) {
   return PALETTE[name.charCodeAt(0) % PALETTE.length];

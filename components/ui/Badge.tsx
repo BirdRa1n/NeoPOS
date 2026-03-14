@@ -1,3 +1,5 @@
+import { COLORS, ALPHA } from '@/lib/constants';
+
 interface BadgeProps {
   children: React.ReactNode;
   variant?: 'success' | 'warning' | 'danger' | 'info' | 'neutral';
@@ -6,11 +8,11 @@ interface BadgeProps {
 
 export function Badge({ children, variant = 'neutral', dot = false }: BadgeProps) {
   const variants = {
-    success: { bg: 'rgba(16,185,129,0.15)', color: '#6EE7B7', dotColor: '#10B981' },
-    warning: { bg: 'rgba(245,158,11,0.15)', color: '#FCD34D', dotColor: '#F59E0B' },
-    danger: { bg: 'rgba(239,68,68,0.15)', color: '#FCA5A5', dotColor: '#EF4444' },
-    info: { bg: 'rgba(99,102,241,0.15)', color: '#A5B4FC', dotColor: '#6366F1' },
-    neutral: { bg: 'rgba(156,163,175,0.15)', color: '#D1D5DB', dotColor: '#9CA3AF' },
+    success: { bg: ALPHA.successBgD, color: COLORS.successSoft, dotColor: COLORS.success },
+    warning: { bg: ALPHA.warningBgD, color: COLORS.warningLight, dotColor: COLORS.warning },
+    danger:  { bg: ALPHA.dangerBgD,  color: COLORS.dangerSoft,  dotColor: COLORS.danger },
+    info:    { bg: ALPHA.accentBgD,  color: COLORS.accentSoft,  dotColor: COLORS.accent },
+    neutral: { bg: 'rgba(156,163,175,0.15)', color: COLORS.neutralSoft, dotColor: COLORS.neutralLight },
   };
 
   const config = variants[variant];

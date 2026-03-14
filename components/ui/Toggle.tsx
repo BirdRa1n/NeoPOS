@@ -1,4 +1,5 @@
 import { ToggleLeft, ToggleRight } from 'lucide-react';
+import { COLORS, ALPHA } from '@/lib/constants';
 
 interface ToggleProps {
   label: string;
@@ -13,24 +14,24 @@ export function Toggle({ label, checked, onChange }: ToggleProps) {
       onClick={() => onChange(!checked)}
       className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl transition-all w-full"
       style={{
-        background: checked ? 'rgba(16,185,129,0.1)' : 'rgba(107,114,128,0.08)',
-        border: `1px solid ${checked ? 'rgba(16,185,129,0.2)' : 'var(--border)'}`,
+        background: checked ? ALPHA.successBgSubtle : ALPHA.neutralBg,
+        border: `1px solid ${checked ? ALPHA.successBorder : 'var(--border)'}`,
       }}
     >
       {checked ? (
-        <ToggleRight size={20} style={{ color: '#10B981' }} />
+        <ToggleRight size={20} style={{ color: COLORS.success }} />
       ) : (
         <ToggleLeft size={20} style={{ color: 'var(--text-muted)' }} />
       )}
       <span
         className="text-sm font-medium"
-        style={{ color: checked ? '#10B981' : 'var(--text-secondary)' }}
+        style={{ color: checked ? COLORS.success : 'var(--text-secondary)' }}
       >
         {label}
       </span>
       <span
         className="ml-auto text-xs font-bold"
-        style={{ color: checked ? '#10B981' : 'var(--text-muted)' }}
+        style={{ color: checked ? COLORS.success : 'var(--text-muted)' }}
       >
         {checked ? 'Ativo' : 'Inativo'}
       </span>

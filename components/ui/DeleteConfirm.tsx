@@ -1,6 +1,7 @@
 import { AlertTriangle, Trash2, Loader2 } from 'lucide-react';
 import { ModalBackdrop, ModalShell } from './Modal';
 import { Button } from './Button';
+import { COLORS, ALPHA } from '@/lib/constants';
 
 interface DeleteConfirmProps {
   title: string;
@@ -17,9 +18,9 @@ export function DeleteConfirm({ title, description, onClose, onConfirm, loading 
         <div className="p-7 flex flex-col items-center text-center gap-4">
           <div
             className="w-14 h-14 rounded-2xl flex items-center justify-center"
-            style={{ background: 'rgba(239,68,68,0.1)' }}
+            style={{ background: ALPHA.dangerBgSubtle }}
           >
-            <AlertTriangle size={26} style={{ color: '#EF4444' }} />
+            <AlertTriangle size={26} style={{ color: COLORS.danger }} />
           </div>
           <div>
             <p className="font-bold text-base mb-1 text-[var(--text-primary)]">{title}</p>

@@ -14,6 +14,7 @@ import {
   Truck, Package, UtensilsCrossed, Eye, Plus, Edit, Trash2, ShieldCheck,
 } from 'lucide-react';
 import { supabase } from '@/supabase/client';
+import { COLORS, ALPHA } from '@/lib/constants';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type OrderType = 'delivery' | 'pickup' | 'table';
@@ -60,36 +61,36 @@ const ORDER_OPS: { key: 'allowed_view_order_types' | 'allowed_create_order_types
 ];
 
 const PERM_GROUPS = [
-  { label: 'Pedidos', color: '#6366F1', perms: [
+  { label: 'Pedidos',                color: COLORS.accent,   perms: [
     { key: 'perm_orders_view',          label: 'Visualizar' },
     { key: 'perm_orders_create',        label: 'Criar' },
     { key: 'perm_orders_edit',          label: 'Editar' },
     { key: 'perm_orders_change_status', label: 'Mudar status' },
     { key: 'perm_orders_delete',        label: 'Excluir' },
   ]},
-  { label: 'Catálogo', color: '#8B5CF6', perms: [
+  { label: 'Catálogo',              color: COLORS.purple,   perms: [
     { key: 'perm_catalog_view', label: 'Visualizar' },
     { key: 'perm_catalog_edit', label: 'Editar' },
   ]},
-  { label: 'Estoque', color: '#10B981', perms: [
+  { label: 'Estoque',               color: COLORS.success,  perms: [
     { key: 'perm_inventory_view', label: 'Visualizar' },
     { key: 'perm_inventory_edit', label: 'Editar' },
   ]},
-  { label: 'Financeiro & Relatórios', color: '#F59E0B', perms: [
+  { label: 'Financeiro & Relatórios', color: COLORS.warning, perms: [
     { key: 'perm_finance_view',   label: 'Financeiro' },
     { key: 'perm_reports_view',   label: 'Relatórios' },
     { key: 'perm_customers_view', label: 'Clientes' },
   ]},
-  { label: 'Administração', color: '#EF4444', perms: [
+  { label: 'Administração',         color: COLORS.danger,   perms: [
     { key: 'perm_store_settings', label: 'Configurações da loja' },
     { key: 'perm_staff_manage',   label: 'Gerenciar equipe' },
   ]},
 ];
 
-const COLOR_OPTIONS = ['#6366F1','#8B5CF6','#EC4899','#EF4444','#F59E0B','#10B981','#3B82F6','#06B6D4','#84CC16','#6B7280'];
+const COLOR_OPTIONS = [COLORS.accent, COLORS.purple, COLORS.pink, COLORS.danger, COLORS.warning, COLORS.success, COLORS.info, COLORS.cyan, COLORS.lime, COLORS.neutral];
 
 const EMPTY_ROLE: StaffRole = {
-  name: '', description: '', color: '#6366F1',
+  name: '', description: '', color: COLORS.accent,
   perm_orders_view: false, perm_orders_create: false, perm_orders_edit: false,
   perm_orders_delete: false, perm_orders_change_status: false,
   perm_inventory_view: false, perm_inventory_edit: false,
@@ -135,7 +136,6 @@ function OrderTypeSelector({
 
   const toggleType = (type: OrderType) => {
     if (value === null) {
-      // Estava "todos" — começa selecionando só os outros
       onChange(ORDER_TYPES.map(t => t.value).filter(t => t !== type));
     } else {
       const has = value.includes(type);
@@ -154,9 +154,9 @@ function OrderTypeSelector({
           disabled={disabled}
           className="text-[10px] font-bold px-2 py-0.5 rounded-full transition-all disabled:opacity-40"
           style={{
-            background: isUnrestricted ? 'rgba(16,185,129,0.12)' : 'rgba(107,114,128,0.1)',
-            color: isUnrestricted ? '#10B981' : 'var(--text-muted)',
-            border: `1px solid ${isUnrestricted ? 'rgba(16,185,129,0.25)' : 'var(--border)'}`,
+            background: isUnrestricted ? ALPHA.successBgSubtle : ALPHA.neutralBg,
+            color: isUnrestricted ? COLORS.success : 'var(--text-muted)',
+            border: `1px solid ${isUnrestricted ? ALPHA.successBorder : 'var(--border)'}`,
           }}
         >
           {isUnrestricted ? '✓ Todos' : 'Restrito'}
@@ -175,13 +175,13 @@ function OrderTypeSelector({
               className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl transition-all disabled:opacity-40"
               style={{
                 background: isSelected
-                  ? (isDark ? 'rgba(99,102,241,0.15)' : 'rgba(99,102,241,0.1)')
+                  ? (isDark ? ALPHA.accentBgD : ALPHA.accentBgL)
                   : 'var(--input-bg)',
-                border: `1.5px solid ${isSelected ? '#6366F1' : 'var(--border)'}`,
+                border: `1.5px solid ${isSelected ? COLORS.accent : 'var(--border)'}`,
               }}
             >
-              <Icon size={14} style={{ color: isSelected ? '#818CF8' : 'var(--text-muted)' }} />
-              <span className="text-[10px] font-semibold" style={{ color: isSelected ? '#818CF8' : 'var(--text-muted)' }}>
+              <Icon size={14} style={{ color: isSelected ? COLORS.accentLight : 'var(--text-muted)' }} />
+              <span className="text-[10px] font-semibold" style={{ color: isSelected ? COLORS.accentLight : 'var(--text-muted)' }}>
                 {typeLabel}
               </span>
             </button>
@@ -209,7 +209,7 @@ export function RoleEditorModal({ role, storeId, isDark, onClose, onSaved }: Rol
     ...(role ? {
       name: role.name ?? '',
       description: role.description ?? '',
-      color: role.color ?? '#6366F1',
+      color: role.color ?? COLORS.accent,
       ...Object.fromEntries(
         Object.entries(role).filter(([k]) => k.startsWith('perm_') || k.startsWith('allowed_'))
       ),
@@ -251,7 +251,7 @@ export function RoleEditorModal({ role, storeId, isDark, onClose, onSaved }: Rol
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+      style={{ background: ALPHA.overlayMd, backdropFilter: 'blur(4px)' }}>
       <div className="w-full max-w-lg rounded-2xl overflow-hidden flex flex-col max-h-[92vh]"
         style={{ background: isDark ? '#0D1019' : '#fff', border: '1px solid var(--border)', boxShadow: '0 24px 80px rgba(0,0,0,0.4)' }}>
 
@@ -280,7 +280,7 @@ export function RoleEditorModal({ role, storeId, isDark, onClose, onSaved }: Rol
         <div className="overflow-y-auto p-5 space-y-6 flex-1">
           {error && (
             <div className="flex items-center gap-2 p-3 rounded-xl text-xs"
-              style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#FCA5A5' }}>
+              style={{ background: ALPHA.dangerBgSubtle, border: `1px solid ${ALPHA.dangerBorder}`, color: COLORS.dangerSoft }}>
               <AlertTriangle size={13} />{error}
             </div>
           )}
@@ -288,7 +288,7 @@ export function RoleEditorModal({ role, storeId, isDark, onClose, onSaved }: Rol
           {/* Nome */}
           <div className="space-y-1.5">
             <label className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-              Nome do cargo <span style={{ color: '#EF4444' }}>*</span>
+              Nome do cargo <span style={{ color: COLORS.danger }}>*</span>
             </label>
             <input value={form.name} onChange={e => setF('name', e.target.value)}
               placeholder="Ex: Atendente, Caixa, Garçom..."
@@ -335,15 +335,15 @@ export function RoleEditorModal({ role, storeId, isDark, onClose, onSaved }: Rol
                     <button key={key} type="button" onClick={() => setF(key as keyof StaffRole, !(form as any)[key])}
                       className="flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all text-left"
                       style={{
-                        background: (form as any)[key] ? (isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.08)') : 'var(--input-bg)',
-                        border: `1px solid ${(form as any)[key] ? '#6366F1' : 'var(--border)'}`,
+                        background: (form as any)[key] ? (isDark ? ALPHA.accentBgSubtleD : ALPHA.accentBgSubtleL) : 'var(--input-bg)',
+                        border: `1px solid ${(form as any)[key] ? COLORS.accent : 'var(--border)'}`,
                       }}>
                       <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 transition-all"
-                        style={{ background: (form as any)[key] ? '#6366F1' : 'var(--border)' }}>
-                        {(form as any)[key] && <Check size={10} color="#fff" />}
+                        style={{ background: (form as any)[key] ? COLORS.accent : 'var(--border)' }}>
+                        {(form as any)[key] && <Check size={10} color={COLORS.white} />}
                       </div>
                       <span className="text-xs font-medium"
-                        style={{ color: (form as any)[key] ? '#818CF8' : 'var(--text-muted)' }}>{label}</span>
+                        style={{ color: (form as any)[key] ? COLORS.accentLight : 'var(--text-muted)' }}>{label}</span>
                     </button>
                   ))}
                 </div>
@@ -357,7 +357,7 @@ export function RoleEditorModal({ role, storeId, isDark, onClose, onSaved }: Rol
               <div style={{ height: 1, background: 'var(--border)' }} />
               <div className="space-y-5">
                 <div className="flex items-center gap-2">
-                  <ShieldCheck size={15} style={{ color: '#6366F1' }} />
+                  <ShieldCheck size={15} style={{ color: COLORS.accent }} />
                   <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
                     Restrição por tipo de pedido
                   </p>
@@ -374,17 +374,17 @@ export function RoleEditorModal({ role, storeId, isDark, onClose, onSaved }: Rol
                       <div key={key} className="rounded-xl p-4 space-y-3"
                         style={{
                           background: hasPerm ? (isDark ? 'rgba(99,102,241,0.05)' : 'rgba(99,102,241,0.03)') : (isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)'),
-                          border: `1px solid ${hasPerm ? 'rgba(99,102,241,0.2)' : 'var(--border)'}`,
+                          border: `1px solid ${hasPerm ? ALPHA.accentBorder : 'var(--border)'}`,
                           opacity: hasPerm ? 1 : 0.5,
                         }}>
                         <div className="flex items-center gap-2">
-                          <Icon size={13} style={{ color: hasPerm ? '#818CF8' : 'var(--text-muted)' }} />
+                          <Icon size={13} style={{ color: hasPerm ? COLORS.accentLight : 'var(--text-muted)' }} />
                           <p className="text-xs font-bold" style={{ color: hasPerm ? 'var(--text-primary)' : 'var(--text-muted)' }}>
                             {label}
                           </p>
                           {!hasPerm && (
                             <span className="text-[10px] px-1.5 py-0.5 rounded-full ml-auto"
-                              style={{ background: 'rgba(107,114,128,0.1)', color: 'var(--text-muted)' }}>
+                              style={{ background: ALPHA.neutralBg, color: 'var(--text-muted)' }}>
                               Permissão desativada
                             </span>
                           )}
@@ -404,8 +404,8 @@ export function RoleEditorModal({ role, storeId, isDark, onClose, onSaved }: Rol
 
                 {/* Legenda */}
                 <div className="rounded-xl p-3 text-[11px] space-y-1.5"
-                  style={{ background: isDark ? 'rgba(99,102,241,0.06)' : 'rgba(99,102,241,0.04)', border: '1px solid rgba(99,102,241,0.15)' }}>
-                  <p className="font-bold" style={{ color: '#818CF8' }}>Como funciona?</p>
+                  style={{ background: isDark ? ALPHA.accentBgSubtleD : 'rgba(99,102,241,0.04)', border: `1px solid ${ALPHA.accentBorder}` }}>
+                  <p className="font-bold" style={{ color: COLORS.accentLight }}>Como funciona?</p>
                   <p style={{ color: 'var(--text-muted)' }}>
                     • <strong style={{ color: 'var(--text-secondary)' }}>Todos</strong> — sem restrição, o cargo opera qualquer tipo de pedido.
                   </p>
@@ -430,7 +430,7 @@ export function RoleEditorModal({ role, storeId, isDark, onClose, onSaved }: Rol
           </button>
           <button onClick={handleSave} disabled={saving}
             className="flex-[2] flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50"
-            style={{ background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', boxShadow: '0 4px 14px rgba(99,102,241,0.3)' }}>
+            style={{ background: COLORS.accentGradient, boxShadow: COLORS.accentShadow }}>
             {saving ? <><Loader2 size={14} className="animate-spin" />Salvando...</> : <><Save size={14} />{isNew ? 'Criar cargo' : 'Salvar alterações'}</>}
           </button>
         </div>

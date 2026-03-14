@@ -1,4 +1,5 @@
 import { TrendingUp, TrendingDown, Activity } from 'lucide-react';
+import { COLORS } from '@/lib/constants';
 
 interface MetricCardProps {
   label: string;
@@ -11,7 +12,7 @@ interface MetricCardProps {
 
 export function MetricCard({ label, value, sub, icon: Icon, accent, trend }: MetricCardProps) {
   const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Activity;
-  const trendColor = trend === 'up' ? '#10B981' : trend === 'down' ? '#EF4444' : 'var(--text-muted)';
+  const trendColor = trend === 'up' ? COLORS.success : trend === 'down' ? COLORS.danger : 'var(--text-muted)';
   
   return (
     <div className="rounded-2xl p-5 relative overflow-hidden transition-all duration-200 hover:-translate-y-0.5"

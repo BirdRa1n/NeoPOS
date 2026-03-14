@@ -1,4 +1,5 @@
 import { useTheme } from '@/contexts/ThemeContext';
+import { COLORS, ALPHA } from '@/lib/constants';
 
 interface PeriodSelectorProps<T extends string> {
   period: T;
@@ -17,8 +18,8 @@ export function PeriodSelector<T extends string>({ period, setPeriod, periods }:
         <button key={p} onClick={() => setPeriod(p)}
           className="px-4 py-1.5 rounded-lg text-xs font-semibold transition-all"
           style={{
-            background: period === p ? (isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.12)') : 'transparent',
-            color: period === p ? '#818CF8' : 'var(--text-muted)',
+            background: period === p ? (isDark ? ALPHA.accentBgD : 'rgba(99,102,241,0.12)') : 'transparent',
+            color: period === p ? COLORS.accentLight : 'var(--text-muted)',
           }}>
           {periods[p]}
         </button>
