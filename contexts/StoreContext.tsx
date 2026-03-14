@@ -23,14 +23,45 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const { data, error } = await supabase
+    // 1. Tenta buscar como dono
+    const { data: ownedStore } = await supabase
       .schema('core')
       .from('stores')
       .select('*')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
-    if (!error && data) setStore(data);
+    if (ownedStore) {
+      setStore(ownedStore);
+      setLoading(false);
+      return;
+    }
+
+    // 2. Tenta buscar como membro ativo de uma loja
+    const { data: membership } = await supabase
+      .schema('core')
+      .from('staff_members')
+      .select('store_id')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    if (membership?.store_id) {
+      const { data: memberStore } = await supabase
+        .schema('core')
+        .from('stores')
+        .select('*')
+        .eq('id', membership.store_id)
+        .maybeSingle();
+
+      if (memberStore) {
+        setStore(memberStore);
+        setLoading(false);
+        return;
+      }
+    }
+
+    setStore(null);
     setLoading(false);
   };
 

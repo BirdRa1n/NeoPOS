@@ -4,6 +4,8 @@ import { useCustomers } from '@/hooks/useCustomers';
 import { useProducts } from '@/hooks/useProducts';
 import { useDeliveryZones, useDeliveryDrivers } from '@/hooks/useDelivery';
 import { useStore } from '@/contexts/StoreContext';
+import { useStaff } from '@/contexts/StaffContext';
+import type { OrderType as StaffOrderType } from '@/contexts/StaffContext';
 import { supabase } from '@/supabase/client';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { formatCurrency } from '@/lib/utils/format';
@@ -12,10 +14,9 @@ import {
   Truck, Package, UtensilsCrossed, Filter, ChevronDown,
   ArrowUpRight, RotateCcw, Plus, X, Loader2, User, Phone,
   MapPin, Minus, DollarSign, AlertTriangle, Edit2, Banknote,
-  CreditCard, Smartphone, Wallet, CheckSquare
+  CreditCard, Smartphone, Wallet, CheckSquare, ShieldAlert,
 } from 'lucide-react';
 import type { OrderStatus } from '@/types';
-
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { FormField } from '@/components/forms/FormField';
@@ -24,27 +25,13 @@ import { Card } from '@/components/ui/Card';
 import { ModalBackdrop, ModalShell, ModalHeader, ModalFooter } from '@/components/ui/Modal';
 import { Badge } from '@/components/ui/Badge';
 
-
-// ─── theme hook (mirrors dashboard) ──────────────────────────────────────────
-type Theme = 'dark' | 'light';
-declare module 'react' { interface Context<T> { } }
-// We read CSS vars directly — no extra context needed
-function useIsDark(): boolean {
-  if (typeof window === 'undefined') return true;
-  return (getComputedStyle(document.documentElement).getPropertyValue('--bg') || '').trim().startsWith('#08');
-}
-
-// ─── Modal primitives ────────────────────────────────────────────────────────
-
-
-
-
-
-
-
-// ─── Order modal — wizard 2 etapas ───────────────────────────────────────────
-function OrderModal({ storeId, onClose, onSuccess }: {
-  storeId: string; onClose: () => void; onSuccess: () => void;
+// ─── OrderModal — wizard de criação de pedido ─────────────────────────────────
+function OrderModal({ storeId, onClose, onSuccess, canCreateTypes }: {
+  storeId: string;
+  onClose: () => void;
+  onSuccess: () => void;
+  /** Tipos de pedido que este cargo pode criar. null = todos. */
+  canCreateTypes: StaffOrderType[] | null;
 }) {
   const isDark = useIsDark();
   const [step, setStep] = useState<1 | 2>(1);
@@ -64,10 +51,16 @@ function OrderModal({ storeId, onClose, onSuccess }: {
       .then(({ data }) => { if (data) setLowIds(new Set(data.map((d: any) => d.product_id))); });
   }, [storeId]);
 
+  // Tipos disponíveis para criar
+  const allTypes: StaffOrderType[] = ['delivery', 'pickup', 'table'];
+  const availableTypes = canCreateTypes === null ? allTypes : allTypes.filter(t => canCreateTypes.includes(t));
+  const defaultType = availableTypes[0] ?? 'delivery';
+
   const [form, setForm] = useState({
-    order_type: 'delivery', customer_id: '', customer_name: '',
-    customer_phone: '', customer_address: '', delivery_zone_id: '',
-    driver_id: '', table_number: '', payment_method: 'cash', notes: '',
+    order_type: defaultType as StaffOrderType,
+    customer_id: '', customer_name: '', customer_phone: '',
+    customer_address: '', delivery_zone_id: '', driver_id: '',
+    table_number: '', payment_method: 'cash', notes: '',
   });
   const [items, setItems] = useState<{ product_id: string; qty: number; price: number }[]>([]);
 
@@ -89,7 +82,6 @@ function OrderModal({ storeId, onClose, onSuccess }: {
     setItems(prev => prev.map(i => i.product_id === id ? { ...i, qty: q } : i));
   };
 
-  // Categorias únicas dos produtos disponíveis
   const categoryMap = products.reduce((m: Map<string, string>, p: any) => {
     if (p.categories?.id && p.categories?.name) m.set(p.categories.id, p.categories.name);
     return m;
@@ -131,7 +123,7 @@ function OrderModal({ storeId, onClose, onSuccess }: {
       const status0 = form.order_type === 'delivery' ? 'pending' : 'confirmed';
       const od: any = {
         store_id: storeId, type: form.order_type, customer_id: cid || null,
-        status: status0, payment_method: form.payment_method, subtotal, total, notes: form.notes || null
+        status: status0, payment_method: form.payment_method, subtotal, total, notes: form.notes || null,
       };
       if (form.order_type === 'delivery') {
         od.delivery_address = form.customer_address;
@@ -161,87 +153,48 @@ function OrderModal({ storeId, onClose, onSuccess }: {
     border: '1px solid var(--input-border)', color: 'var(--text-primary)',
   };
 
-  // ── Shared header ────────────────────────────────────────────────────────────
-  const Header = () => (
-    <div className="flex items-center justify-between px-5 py-4"
-      style={{ borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-          style={{ background: 'rgba(99,102,241,0.12)', flexShrink: 0 }}>
-          <ShoppingCart size={15} style={{ color: '#6366F1' }} />
-        </div>
-        <div>
-          <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Novo Pedido</p>
-          <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-            {step === 1 ? 'Passo 1 — Selecionar produtos' : 'Passo 2 — Dados do pedido'}
-          </p>
-        </div>
-      </div>
-      <div className="flex items-center gap-3">
-        <div className="flex gap-1.5 items-center">
-          {([1, 2] as const).map(s => (
-            <div key={s} style={{
-              height: 6, borderRadius: 999, transition: 'all .25s',
-              width: s === step ? 22 : 8,
-              background: s === step ? '#6366F1' : s < step ? '#10B981' : 'var(--border)',
-            }} />
-          ))}
-        </div>
-        <button onClick={onClose}
-          className="w-7 h-7 flex items-center justify-center rounded-lg"
-          style={{ color: 'var(--text-muted)' }}
-          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--surface-hover)'}
-          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
-          <X size={15} />
-        </button>
-      </div>
-    </div>
-  );
-
-  // ────────────────────────────────────────────────────────────────────────────
-  // ETAPA 1 — grade de produtos com categorias e scroll
-  // ────────────────────────────────────────────────────────────────────────────
+  // Etapa 1 — produtos
   if (step === 1) return (
     <ModalBackdrop onClose={onClose}>
       <div style={{
         position: 'relative', display: 'flex', flexDirection: 'column',
         background: 'var(--surface)', border: '1px solid var(--border)',
         borderRadius: 20, boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
-        width: '100%', maxWidth: 680, height: '90vh', maxHeight: 800,
-        overflow: 'hidden',
+        width: '100%', maxWidth: 680, height: '90vh', maxHeight: 800, overflow: 'hidden',
       }}>
-        <Header />
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'rgba(99,102,241,0.12)' }}>
+              <ShoppingCart size={15} style={{ color: '#6366F1' }} />
+            </div>
+            <div>
+              <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Novo Pedido</p>
+              <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Passo 1 — Selecionar produtos</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg"
+            style={{ color: 'var(--text-muted)' }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--surface-hover)'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
+            <X size={15} />
+          </button>
+        </div>
 
-        {/* Barra de busca + chips de categoria — fixa */}
+        {/* Busca + categorias */}
         <div style={{ flexShrink: 0, padding: '12px 16px 10px', borderBottom: '1px solid var(--border)' }}>
-          {/* Busca */}
           <div style={{ position: 'relative', marginBottom: categories.length ? 10 : 0 }}>
             <Search size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-            <input
-              value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar produto..."
-              style={{
-                width: '100%', paddingLeft: 36, paddingRight: 14, paddingTop: 8, paddingBottom: 8,
-                background: 'var(--input-bg)', border: '1px solid var(--input-border)',
-                borderRadius: 12, fontSize: 13, color: 'var(--text-primary)', outline: 'none',
-                boxSizing: 'border-box',
-              }}
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar produto..."
+              style={{ width: '100%', paddingLeft: 36, paddingRight: 14, paddingTop: 8, paddingBottom: 8, background: 'var(--input-bg)', border: '1px solid var(--input-border)', borderRadius: 12, fontSize: 13, color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box' as const }}
               onFocus={e => (e.currentTarget.style.borderColor = '#6366F1')}
-              onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')}
-            />
+              onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')} />
           </div>
-          {/* Chips de categoria */}
           {categories.length > 0 && (
             <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
-              {([{ id: 'all', name: 'Todos' }, ...categories] as { id: string; name: string }[]).map(cat => (
+              {([{ id: 'all', name: 'Todos' }, ...categories]).map((cat: any) => (
                 <button key={cat.id} type="button" onClick={() => setCatFilter(cat.id)}
-                  style={{
-                    flexShrink: 0, padding: '4px 12px', borderRadius: 999, fontSize: 12,
-                    fontWeight: 600, cursor: 'pointer', transition: 'all .15s',
-                    background: catFilter === cat.id ? '#6366F1' : 'var(--input-bg)',
-                    color: catFilter === cat.id ? '#fff' : 'var(--text-muted)',
-                    border: `1px solid ${catFilter === cat.id ? '#6366F1' : 'var(--input-border)'}`,
-                  }}>
+                  style={{ flexShrink: 0, padding: '4px 12px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer', background: catFilter === cat.id ? '#6366F1' : 'var(--input-bg)', color: catFilter === cat.id ? '#fff' : 'var(--text-muted)', border: `1px solid ${catFilter === cat.id ? '#6366F1' : 'var(--input-border)'}` }}>
                   {cat.name}
                 </button>
               ))}
@@ -249,7 +202,7 @@ function OrderModal({ storeId, onClose, onSuccess }: {
           )}
         </div>
 
-        {/* Grade de produtos — área de scroll */}
+        {/* Grade de produtos */}
         <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
           {visibleProds.length === 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 8 }}>
@@ -263,30 +216,13 @@ function OrderModal({ storeId, onClose, onSuccess }: {
                 const img = p.product_images?.find((i: any) => i.is_primary)?.url ?? p.product_images?.[0]?.url;
                 const price = p.promotional_price ?? p.price;
                 return (
-                  <div key={p.id} style={{
-                    background: 'var(--input-bg)',
-                    border: `1.5px solid ${cart ? '#6366F1' : 'var(--border)'}`,
-                    borderRadius: 14,
-                    boxShadow: cart ? '0 0 0 3px rgba(99,102,241,0.12)' : 'none',
-                    transition: 'border-color .15s, box-shadow .15s',
-                    overflow: 'hidden',
-                  }}>
-                    {/* Foto */}
+                  <div key={p.id} style={{ background: 'var(--input-bg)', border: `1.5px solid ${cart ? '#6366F1' : 'var(--border)'}`, borderRadius: 14, boxShadow: cart ? '0 0 0 3px rgba(99,102,241,0.12)' : 'none', overflow: 'hidden' }}>
                     <div style={{ position: 'relative', aspectRatio: '4/3', background: 'var(--surface)' }}>
-                      {img
-                        ? <img src={img} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                        : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Package size={24} style={{ opacity: 0.18, color: 'var(--text-muted)' }} />
-                        </div>
-                      }
-                      {p.promotional_price && (
-                        <span style={{ position: 'absolute', top: 6, left: 6, background: '#EF4444', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 6 }}>PROMO</span>
-                      )}
-                      {lowIds.has(p.id) && (
-                        <span style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(245,158,11,0.9)', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 6 }}>Baixo</span>
-                      )}
+                      {img ? <img src={img} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                        : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Package size={24} style={{ opacity: 0.18, color: 'var(--text-muted)' }} /></div>}
+                      {p.promotional_price && <span style={{ position: 'absolute', top: 6, left: 6, background: '#EF4444', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 6 }}>PROMO</span>}
+                      {lowIds.has(p.id) && <span style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(245,158,11,0.9)', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 6 }}>Baixo</span>}
                     </div>
-                    {/* Info */}
                     <div style={{ padding: '8px 10px' }}>
                       <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6, lineHeight: 1.3 }}>{p.name}</p>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
@@ -296,21 +232,12 @@ function OrderModal({ storeId, onClose, onSuccess }: {
                         </div>
                         {cart ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <button type="button" onClick={() => setQty(p.id, cart.qty - 1)}
-                              style={{ width: 24, height: 24, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer' }}>
-                              <Minus size={9} />
-                            </button>
+                            <button type="button" onClick={() => setQty(p.id, cart.qty - 1)} style={{ width: 24, height: 24, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-muted)', cursor: 'pointer' }}><Minus size={9} /></button>
                             <span style={{ fontSize: 12, fontWeight: 700, minWidth: 16, textAlign: 'center', color: 'var(--text-primary)' }}>{cart.qty}</span>
-                            <button type="button" onClick={() => setQty(p.id, cart.qty + 1)}
-                              style={{ width: 24, height: 24, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#6366F1', color: '#fff', border: 'none', cursor: 'pointer' }}>
-                              <Plus size={9} />
-                            </button>
+                            <button type="button" onClick={() => setQty(p.id, cart.qty + 1)} style={{ width: 24, height: 24, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#6366F1', color: '#fff', border: 'none', cursor: 'pointer' }}><Plus size={9} /></button>
                           </div>
                         ) : (
-                          <button type="button" onClick={() => addItem(p)}
-                            style={{ width: 28, height: 28, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#6366F1', color: '#fff', border: 'none', cursor: 'pointer', flexShrink: 0 }}>
-                            <Plus size={13} />
-                          </button>
+                          <button type="button" onClick={() => addItem(p)} style={{ width: 28, height: 28, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#6366F1', color: '#fff', border: 'none', cursor: 'pointer', flexShrink: 0 }}><Plus size={13} /></button>
                         )}
                       </div>
                     </div>
@@ -328,16 +255,10 @@ function OrderModal({ storeId, onClose, onSuccess }: {
           ) : (
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <div style={{ flex: 1 }}>
-                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 1 }}>{totalQty} item{totalQty !== 1 ? 's' : ''} selecionado{totalQty !== 1 ? 's' : ''}</p>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 1 }}>{totalQty} item{totalQty !== 1 ? 's' : ''}</p>
                 <p style={{ fontSize: 16, fontWeight: 700, color: '#6366F1' }}>{formatCurrency(subtotal)}</p>
               </div>
-              <button type="button" onClick={() => setStep(2)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6, padding: '10px 20px',
-                  borderRadius: 12, fontSize: 13, fontWeight: 700, color: '#fff',
-                  background: 'linear-gradient(135deg,#6366F1,#8B5CF6)',
-                  boxShadow: '0 4px 14px rgba(99,102,241,0.3)', border: 'none', cursor: 'pointer',
-                }}>
+              <button type="button" onClick={() => setStep(2)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 20px', borderRadius: 12, fontSize: 13, fontWeight: 700, color: '#fff', background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', boxShadow: '0 4px 14px rgba(99,102,241,0.3)', border: 'none', cursor: 'pointer' }}>
                 Continuar <ArrowUpRight size={14} />
               </button>
             </div>
@@ -347,36 +268,41 @@ function OrderModal({ storeId, onClose, onSuccess }: {
     </ModalBackdrop>
   );
 
-  // ────────────────────────────────────────────────────────────────────────────
-  // ETAPA 2 — dados do pedido com scroll e botão voltar
-  // ────────────────────────────────────────────────────────────────────────────
+  // Etapa 2 — dados do pedido
   return (
     <ModalBackdrop onClose={onClose}>
       <div style={{
         position: 'relative', display: 'flex', flexDirection: 'column',
         background: 'var(--surface)', border: '1px solid var(--border)',
         borderRadius: 20, boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
-        width: '100%', maxWidth: 600, height: '90vh', maxHeight: 800,
-        overflow: 'hidden',
+        width: '100%', maxWidth: 600, height: '90vh', maxHeight: 800, overflow: 'hidden',
       }}>
-        <Header />
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'rgba(99,102,241,0.12)' }}>
+              <ShoppingCart size={15} style={{ color: '#6366F1' }} />
+            </div>
+            <div>
+              <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Novo Pedido</p>
+              <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Passo 2 — Dados do pedido</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-lg" style={{ color: 'var(--text-muted)' }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--surface-hover)'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
+            <X size={15} />
+          </button>
+        </div>
 
-        {/* Corpo com scroll */}
         <form onSubmit={handleSubmit} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 0' }}>
 
-            {/* Resumo do carrinho — card clicável para voltar */}
+            {/* Resumo do carrinho */}
             <div style={{ borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(99,102,241,0.25)', marginBottom: 20 }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '8px 14px', background: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.06)',
-                borderBottom: '1px solid rgba(99,102,241,0.15)',
-              }}>
-                <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#818CF8' }}>
-                  {totalQty} item{totalQty !== 1 ? 's' : ''} · {formatCurrency(subtotal)}
-                </span>
-                <button type="button" onClick={() => setStep(1)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, color: '#818CF8', background: 'rgba(99,102,241,0.12)', border: 'none', borderRadius: 8, padding: '4px 10px', cursor: 'pointer' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', background: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.06)', borderBottom: '1px solid rgba(99,102,241,0.15)' }}>
+                <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: 1, color: '#818CF8' }}>{totalQty} item{totalQty !== 1 ? 's' : ''} · {formatCurrency(subtotal)}</span>
+                <button type="button" onClick={() => setStep(1)} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, color: '#818CF8', background: 'rgba(99,102,241,0.12)', border: 'none', borderRadius: 8, padding: '4px 10px', cursor: 'pointer' }}>
                   <Edit2 size={10} /> Editar produtos
                 </button>
               </div>
@@ -385,9 +311,7 @@ function OrderModal({ storeId, onClose, onSuccess }: {
                   const prod = products.find((p: any) => p.id === item.product_id);
                   return (
                     <div key={item.product_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                        <span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>{item.qty}×</span> {prod?.name}
-                      </span>
+                      <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}><span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>{item.qty}×</span> {prod?.name}</span>
                       <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{formatCurrency(item.price * item.qty)}</span>
                     </div>
                   );
@@ -395,24 +319,16 @@ function OrderModal({ storeId, onClose, onSuccess }: {
               </div>
             </div>
 
-            {/* Tipo de pedido */}
-            <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#6366F1', marginBottom: 10 }}>Tipo de Pedido</p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 20 }}>
-              {([
-                { value: 'delivery', label: 'Entrega', icon: Truck },
-                { value: 'pickup', label: 'Retirada', icon: Package },
-                { value: 'table', label: 'No Local', icon: UtensilsCrossed },
-              ] as const).map(({ value, label, icon: Icon }) => {
-                const active = form.order_type === value;
+            {/* Tipo de pedido — filtra pelos tipos permitidos */}
+            <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: 1, color: '#6366F1', marginBottom: 10 }}>Tipo de Pedido</p>
+            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${availableTypes.length}, 1fr)`, gap: 8, marginBottom: 20 }}>
+              {availableTypes.map(type => {
+                const active = form.order_type === type;
+                const Icon = ORDER_TYPE_ICON[type];
+                const label = { delivery: 'Entrega', pickup: 'Retirada', table: 'No Local' }[type];
                 return (
-                  <button key={value} type="button" onClick={() => setForm(f => ({ ...f, order_type: value }))}
-                    style={{
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '10px 0',
-                      borderRadius: 12, cursor: 'pointer', transition: 'all .15s',
-                      background: active ? (isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.1)') : 'var(--input-bg)',
-                      border: `1px solid ${active ? '#6366F1' : 'var(--input-border)'}`,
-                      color: active ? '#818CF8' : 'var(--text-muted)',
-                    }}>
+                  <button key={type} type="button" onClick={() => setForm(f => ({ ...f, order_type: type }))}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '10px 0', borderRadius: 12, cursor: 'pointer', background: active ? (isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.1)') : 'var(--input-bg)', border: `1px solid ${active ? '#6366F1' : 'var(--input-border)'}`, color: active ? '#818CF8' : 'var(--text-muted)' }}>
                     <Icon size={18} />
                     <span style={{ fontSize: 11, fontWeight: 600 }}>{label}</span>
                   </button>
@@ -421,13 +337,11 @@ function OrderModal({ storeId, onClose, onSuccess }: {
             </div>
 
             {/* Cliente */}
-            <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#8B5CF6', marginBottom: 10 }}>Cliente</p>
+            <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: 1, color: '#8B5CF6', marginBottom: 10 }}>Cliente</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
               <FormField label="Cliente Cadastrado">
-                <select value={form.customer_id} onChange={set('customer_id')}
-                  className="w-full rounded-xl text-sm outline-none" style={selStyle}
-                  onFocus={e => (e.currentTarget.style.borderColor = '#8B5CF6')}
-                  onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')}>
+                <select value={form.customer_id} onChange={set('customer_id')} className="w-full rounded-xl text-sm outline-none" style={selStyle}
+                  onFocus={e => (e.currentTarget.style.borderColor = '#8B5CF6')} onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')}>
                   <option value="">Novo cliente</option>
                   {customers.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
@@ -435,8 +349,7 @@ function OrderModal({ storeId, onClose, onSuccess }: {
               {!form.customer_id && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   <FormField label="Nome" required={form.order_type === 'delivery'}>
-                    <Input icon={User} value={form.customer_name} onChange={set('customer_name')} placeholder="Nome"
-                      required={form.order_type === 'delivery' && !form.customer_id} />
+                    <Input icon={User} value={form.customer_name} onChange={set('customer_name')} placeholder="Nome" required={form.order_type === 'delivery' && !form.customer_id} />
                   </FormField>
                   <FormField label="Telefone">
                     <Input icon={Phone} value={form.customer_phone} onChange={set('customer_phone')} placeholder="(00) 00000-0000" />
@@ -453,10 +366,8 @@ function OrderModal({ storeId, onClose, onSuccess }: {
                 </FormField>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   <FormField label="Zona de Entrega">
-                    <select value={form.delivery_zone_id} onChange={set('delivery_zone_id')}
-                      className="w-full rounded-xl text-sm outline-none" style={selStyle}
-                      onFocus={e => (e.currentTarget.style.borderColor = '#8B5CF6')}
-                      onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')}>
+                    <select value={form.delivery_zone_id} onChange={set('delivery_zone_id')} className="w-full rounded-xl text-sm outline-none" style={selStyle}
+                      onFocus={e => (e.currentTarget.style.borderColor = '#8B5CF6')} onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')}>
                       <option value="">Selecione</option>
                       {zones.filter((z: any) => z.active).map((z: any) => (
                         <option key={z.id} value={z.id}>{z.neighborhood} — {formatCurrency(z.delivery_fee)}</option>
@@ -464,10 +375,8 @@ function OrderModal({ storeId, onClose, onSuccess }: {
                     </select>
                   </FormField>
                   <FormField label="Entregador">
-                    <select value={form.driver_id} onChange={set('driver_id')}
-                      className="w-full rounded-xl text-sm outline-none" style={selStyle}
-                      onFocus={e => (e.currentTarget.style.borderColor = '#8B5CF6')}
-                      onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')}>
+                    <select value={form.driver_id} onChange={set('driver_id')} className="w-full rounded-xl text-sm outline-none" style={selStyle}
+                      onFocus={e => (e.currentTarget.style.borderColor = '#8B5CF6')} onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')}>
                       <option value="">Depois</option>
                       {drivers.filter((d: any) => d.active).map((d: any) => (
                         <option key={d.id} value={d.id}>{d.name}</option>
@@ -486,7 +395,7 @@ function OrderModal({ storeId, onClose, onSuccess }: {
             )}
 
             {/* Pagamento */}
-            <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#F59E0B', marginBottom: 10 }}>Pagamento</p>
+            <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: 1, color: '#F59E0B', marginBottom: 10 }}>Pagamento</p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 20 }}>
               {([
                 { value: 'cash', label: 'Dinheiro', icon: Banknote },
@@ -499,27 +408,17 @@ function OrderModal({ storeId, onClose, onSuccess }: {
                 const active = form.payment_method === value;
                 return (
                   <button key={value} type="button" onClick={() => setForm(f => ({ ...f, payment_method: value }))}
-                    style={{
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 0',
-                      borderRadius: 10, fontSize: 11, fontWeight: 600, cursor: 'pointer', transition: 'all .15s',
-                      background: active ? (isDark ? 'rgba(245,158,11,0.18)' : 'rgba(245,158,11,0.1)') : 'var(--input-bg)',
-                      border: `1px solid ${active ? '#F59E0B' : 'var(--input-border)'}`,
-                      color: active ? '#F59E0B' : 'var(--text-muted)',
-                    }}>
-                    <Icon size={14} />
-                    {label}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '8px 0', borderRadius: 10, fontSize: 11, fontWeight: 600, cursor: 'pointer', background: active ? (isDark ? 'rgba(245,158,11,0.18)' : 'rgba(245,158,11,0.1)') : 'var(--input-bg)', border: `1px solid ${active ? '#F59E0B' : 'var(--input-border)'}`, color: active ? '#F59E0B' : 'var(--text-muted)' }}>
+                    <Icon size={14} />{label}
                   </button>
                 );
               })}
             </div>
 
             <FormField label="Observações">
-              <textarea value={form.notes} onChange={set('notes')}
-                className="w-full rounded-xl text-sm outline-none resize-none"
-                style={{ ...selStyle, minHeight: 60, display: 'block', width: '100%', boxSizing: 'border-box' }}
-                placeholder="Alguma observação..."
-                onFocus={e => (e.currentTarget.style.borderColor = '#F59E0B')}
-                onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')} />
+              <textarea value={form.notes} onChange={set('notes')} className="w-full rounded-xl text-sm outline-none resize-none"
+                style={{ ...selStyle, minHeight: 60, display: 'block', width: '100%', boxSizing: 'border-box' as const }} placeholder="Alguma observação..."
+                onFocus={e => (e.currentTarget.style.borderColor = '#F59E0B')} onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')} />
             </FormField>
 
             {/* Total */}
@@ -539,32 +438,15 @@ function OrderModal({ storeId, onClose, onSuccess }: {
                 <span style={{ fontSize: 17, fontWeight: 700, color: '#6366F1' }}>{formatCurrency(total)}</span>
               </div>
             </div>
-
-            {/* Espaço extra para o footer não cobrir conteúdo */}
             <div style={{ height: 80 }} />
           </div>
 
           {/* Footer fixo */}
-          <div style={{
-            flexShrink: 0, display: 'flex', gap: 10, padding: '12px 20px',
-            borderTop: '1px solid var(--border)', background: 'var(--surface)',
-          }}>
-            <button type="button" onClick={() => setStep(1)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px',
-                borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)',
-                flexShrink: 0,
-              }}>
+          <div style={{ flexShrink: 0, display: 'flex', gap: 10, padding: '12px 20px', borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>
+            <button type="button" onClick={() => setStep(1)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 16px', borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)', flexShrink: 0 }}>
               <ArrowUpRight size={12} style={{ transform: 'rotate(180deg)' }} /> Produtos
             </button>
-            <button type="submit" disabled={saving}
-              style={{
-                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                padding: '10px 0', borderRadius: 12, fontSize: 13, fontWeight: 700, color: '#fff',
-                background: saving ? 'rgba(99,102,241,0.6)' : 'linear-gradient(135deg,#6366F1,#8B5CF6)',
-                boxShadow: saving ? 'none' : '0 4px 14px rgba(99,102,241,0.3)', border: 'none', cursor: saving ? 'not-allowed' : 'pointer',
-              }}>
+            <button type="submit" disabled={saving} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 0', borderRadius: 12, fontSize: 13, fontWeight: 700, color: '#fff', background: saving ? 'rgba(99,102,241,0.6)' : 'linear-gradient(135deg,#6366F1,#8B5CF6)', boxShadow: saving ? 'none' : '0 4px 14px rgba(99,102,241,0.3)', border: 'none', cursor: saving ? 'not-allowed' : 'pointer' }}>
               {saving ? <><Loader2 size={14} className="animate-spin" /> Criando...</> : <><ShoppingCart size={14} /> Criar Pedido</>}
             </button>
           </div>
@@ -574,395 +456,47 @@ function OrderModal({ storeId, onClose, onSuccess }: {
   );
 }
 
-// ─── helpers ──────────────────────────────────────────────────────────────────
-const PAYMENT_LABELS: Record<string, string> = {
-  cash: 'Dinheiro', credit_card: 'Cartão de Crédito',
-  debit_card: 'Cartão de Débito', pix: 'PIX',
-  meal_voucher: 'Vale Refeição', other: 'Outro',
-};
-const PAYMENT_ICONS: Record<string, React.FC<any>> = {
-  cash: Banknote, credit_card: CreditCard,
-  debit_card: Wallet, pix: Smartphone,
-  meal_voucher: CreditCard, other: DollarSign,
-};
-
-// ─── Order Details Modal ──────────────────────────────────────────────────────
-function OrderDetailsModal({ order: initialOrder, onClose, onStatusChange }: {
-  order: any; onClose: () => void; onStatusChange: () => void;
-}) {
-  const isDark = useIsDark();
-  const [order, setOrder] = useState<any>(initialOrder);
-  const [updating, setUpdating] = useState(false);
-  const [markingPaid, setMarkingPaid] = useState(false);
-  const [items, setItems] = useState<any[]>([]);
-  const [loadingItems, setLoadingItems] = useState(true);
-
-  // edit mode
-  const [editing, setEditing] = useState(false);
-  const [editItems, setEditItems] = useState<any[]>([]);
-  const [editPayment, setEditPayment] = useState(order.payment_method);
-  const [editNotes, setEditNotes] = useState(order.notes ?? '');
-  const [savingEdit, setSavingEdit] = useState(false);
-
-  useEffect(() => {
-    supabase.schema('orders').from('order_items').select('*').eq('order_id', order.id)
-      .then(({ data }) => { if (data) { setItems(data); setEditItems(data.map(i => ({ ...i }))); } setLoadingItems(false); });
-  }, [order.id]);
-
-  // ── status ──
-  const handleStatusChange = async (newStatus: string) => {
-    setUpdating(true);
-    try {
-      const { error } = await supabase.schema('orders').from('orders').update({ status: newStatus }).eq('id', order.id);
-      if (error) throw error;
-      setOrder((o: any) => ({ ...o, status: newStatus }));
-      onStatusChange();
-    } catch (err: any) { alert(err.message); }
-    finally { setUpdating(false); }
-  };
-
-  // ── marcar como pago ──
-  const handleMarkPaid = async () => {
-    setMarkingPaid(true);
-    try {
-      const { error } = await supabase.schema('orders').from('orders')
-        .update({ payment_status: 'paid' }).eq('id', order.id);
-      if (error) throw error;
-      setOrder((o: any) => ({ ...o, payment_status: 'paid' }));
-      onStatusChange();
-    } catch (err: any) { alert(err.message); }
-    finally { setMarkingPaid(false); }
-  };
-
-  // ── edição de itens ──
-  const updateEditQty = (id: string, delta: number) => {
-    setEditItems(prev => prev.map(i => i.id === id
-      ? { ...i, quantity: Math.max(1, i.quantity + delta), subtotal: i.unit_price * Math.max(1, i.quantity + delta) }
-      : i
-    ));
-  };
-  const removeEditItem = (id: string) => setEditItems(prev => prev.filter(i => i.id !== id));
-
-  // ── salvar edição ──
-  const handleSaveEdit = async () => {
-    setSavingEdit(true);
-    try {
-      if (editItems.length === 0) { alert('O pedido precisa ter pelo menos 1 item.'); return; }
-
-      // atualizar quantities nos order_items
-      for (const item of editItems) {
-        const original = items.find(i => i.id === item.id);
-        if (original && (original.quantity !== item.quantity)) {
-          const { error } = await supabase.schema('orders').from('order_items')
-            .update({ quantity: item.quantity, subtotal: item.unit_price * item.quantity })
-            .eq('id', item.id);
-          if (error) throw error;
-        }
-      }
-      // remover itens deletados
-      const removedIds = items.filter(i => !editItems.find(e => e.id === i.id)).map(i => i.id);
-      if (removedIds.length > 0) {
-        const { error } = await supabase.schema('orders').from('order_items').delete().in('id', removedIds);
-        if (error) throw error;
-      }
-
-      // recalcular subtotal/total
-      const newSubtotal = editItems.reduce((s, i) => s + i.unit_price * i.quantity, 0);
-      const newTotal = newSubtotal + (order.delivery_fee ?? 0) - (order.discount ?? 0);
-
-      const { error: orderErr } = await supabase.schema('orders').from('orders').update({
-        payment_method: editPayment,
-        notes: editNotes || null,
-        subtotal: newSubtotal,
-        total: newTotal,
-      }).eq('id', order.id);
-      if (orderErr) throw orderErr;
-
-      setOrder((o: any) => ({ ...o, payment_method: editPayment, notes: editNotes, subtotal: newSubtotal, total: newTotal }));
-      setItems(editItems);
-      setEditing(false);
-      onStatusChange();
-    } catch (err: any) { alert(err.message ?? 'Erro ao salvar'); }
-    finally { setSavingEdit(false); }
-  };
-
-  const statusFlow = ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'delivered'];
-  const currentIndex = statusFlow.indexOf(order.status);
-  const nextStatus = statusFlow[currentIndex + 1];
-  const prevStatus = statusFlow[currentIndex - 1];
-  const isTable = order.type === 'table' || order.order_type === 'table';
-  const isPaid = order.payment_status === 'paid';
-  const PayIcon = PAYMENT_ICONS[order.payment_method] ?? DollarSign;
-
-  const displayItems = editing ? editItems : items;
-  const displaySubtotal = editing
-    ? editItems.reduce((s, i) => s + i.unit_price * i.quantity, 0)
-    : order.subtotal;
-  const displayTotal = displaySubtotal + (order.delivery_fee ?? 0) - (order.discount ?? 0);
-
-  return (
-    <ModalBackdrop onClose={onClose}>
-      <ModalShell maxW="max-w-2xl">
-        <ModalHeader
-          title={`Pedido #${order.order_number || order.id.slice(0, 6)}`}
-          subtitle={`Criado em ${new Date(order.created_at).toLocaleString('pt-BR')}`}
-          icon={ShoppingCart}
-          onClose={onClose}
-        />
-        <div className="flex-1 overflow-y-auto p-6 space-y-5">
-
-          {/* Alerta de pagamento pendente para mesas */}
-          {isTable && !isPaid && (
-            <div className="flex items-center gap-3 p-3 rounded-xl"
-              style={{ background: isDark ? 'rgba(245,158,11,0.08)' : 'rgba(245,158,11,0.06)', border: `1px solid ${isDark ? 'rgba(245,158,11,0.25)' : 'rgba(245,158,11,0.2)'}` }}>
-              <AlertTriangle size={16} style={{ color: '#F59E0B', flexShrink: 0 }} />
-              <div className="flex-1">
-                <p className="text-xs font-bold" style={{ color: isDark ? '#FCD34D' : '#92400E' }}>Pagamento pendente</p>
-                <p className="text-[11px]" style={{ color: isDark ? 'rgba(252,211,77,0.8)' : '#B45309' }}>
-                  Este pedido de mesa ainda não foi cobrado.
-                </p>
-              </div>
-              <button onClick={handleMarkPaid} disabled={markingPaid}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-60 transition-all whitespace-nowrap"
-                style={{ background: 'linear-gradient(135deg,#10B981,#059669)', boxShadow: '0 2px 8px rgba(16,185,129,0.3)' }}>
-                {markingPaid ? <Loader2 size={12} className="animate-spin" /> : <CheckSquare size={12} />}
-                Marcar como pago
-              </button>
-            </div>
-          )}
-          {isTable && isPaid && (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl"
-              style={{ background: isDark ? 'rgba(16,185,129,0.08)' : 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)' }}>
-              <CheckSquare size={14} style={{ color: '#10B981' }} />
-              <span className="text-xs font-semibold" style={{ color: isDark ? '#6EE7B7' : '#065F46' }}>Pago</span>
-            </div>
-          )}
-
-          {/* Status */}
-          <div>
-            <div className="flex items-center gap-3"><p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#6366F1" }}>Status do Pedido</p><div className="flex-1 h-px" style={{ background: "var(--border)" }} /></div>
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <StatusBadge status={order.status} />
-              {prevStatus && (
-                <button onClick={() => handleStatusChange(prevStatus)} disabled={updating}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
-                  style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
-                  ← Voltar
-                </button>
-              )}
-              {nextStatus && (
-                <button onClick={() => handleStatusChange(nextStatus)} disabled={updating}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
-                  style={{ background: 'linear-gradient(135deg,#10B981,#059669)' }}>
-                  {updating ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
-                  Avançar →
-                </button>
-              )}
-              {order.status !== 'delivered' && (
-                <button onClick={() => handleStatusChange('delivered')} disabled={updating}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50"
-                  style={{ background: 'rgba(16,185,129,0.08)', color: '#10B981', border: '1px solid rgba(16,185,129,0.2)' }}>
-                  <CheckCircle2 size={12} /> Marcar como entregue
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Cliente */}
-          <div>
-            <div className="flex items-center gap-3"><p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#8B5CF6" }}>Cliente</p><div className="flex-1 h-px" style={{ background: "var(--border)" }} /></div>
-            <div className="mt-3 p-4 rounded-xl" style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
-              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                {order.customer?.name || (isTable && order.table_number ? `Mesa ${order.table_number}` : 'Cliente não informado')}
-              </p>
-              {order.customer?.phone && (
-                <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                  <Phone size={10} className="inline mr-1" />{order.customer.phone}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Entrega */}
-          {(order.type === 'delivery' || order.order_type === 'delivery') && order.delivery_address && (
-            <div>
-              <div className="flex items-center gap-3"><p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#10B981" }}>Entrega</p><div className="flex-1 h-px" style={{ background: "var(--border)" }} /></div>
-              <div className="mt-3 p-4 rounded-xl" style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
-                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                  <MapPin size={12} className="inline mr-1" />{order.delivery_address}
-                  {order.delivery_neighborhood && ` — ${order.delivery_neighborhood}`}
-                </p>
-                {order.delivery_complement && (
-                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>Complemento: {order.delivery_complement}</p>
-                )}
-                {order.delivery_fee > 0 && (
-                  <p className="text-xs mt-2 font-semibold" style={{ color: '#10B981' }}>Taxa: {formatCurrency(order.delivery_fee)}</p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Itens + modo edição */}
-          <div>
-            <div className="flex items-center gap-3">
-              <p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#F59E0B" }}>Itens do Pedido</p>
-              <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
-              {!editing ? (
-                <button onClick={() => setEditing(true)}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all"
-                  style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}
-                  onMouseEnter={e => Object.assign((e.currentTarget as HTMLElement).style, { color: '#818CF8', borderColor: '#6366F1' })}
-                  onMouseLeave={e => Object.assign((e.currentTarget as HTMLElement).style, { color: 'var(--text-muted)', borderColor: 'var(--border)' })}>
-                  <Edit2 size={11} /> Editar
-                </button>
-              ) : (
-                <div className="flex gap-1.5">
-                  <button onClick={() => { setEditing(false); setEditItems(items.map(i => ({ ...i }))); setEditPayment(order.payment_method); setEditNotes(order.notes ?? ''); }}
-                    className="px-2.5 py-1 rounded-lg text-[11px] font-semibold"
-                    style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-                    Cancelar
-                  </button>
-                  <button onClick={handleSaveEdit} disabled={savingEdit}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-white disabled:opacity-60"
-                    style={{ background: 'linear-gradient(135deg,#6366F1,#8B5CF6)' }}>
-                    {savingEdit ? <Loader2 size={11} className="animate-spin" /> : <CheckCircle2 size={11} />}
-                    Salvar
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-3 space-y-2">
-              {loadingItems ? (
-                <div className="text-center py-4"><Loader2 size={20} className="animate-spin mx-auto" style={{ color: 'var(--text-muted)' }} /></div>
-              ) : displayItems.map((item) => (
-                <div key={item.id} className="flex items-center gap-3 p-3 rounded-xl"
-                  style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{item.product_name}</p>
-                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{formatCurrency(item.unit_price)} × {item.quantity}</p>
-                  </div>
-                  {editing ? (
-                    <div className="flex items-center gap-1.5">
-                      <button onClick={() => updateEditQty(item.id, -1)}
-                        className="w-6 h-6 flex items-center justify-center rounded-lg text-xs font-bold"
-                        style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-                        <Minus size={10} />
-                      </button>
-                      <span className="text-sm font-bold w-5 text-center" style={{ color: 'var(--text-primary)' }}>{item.quantity}</span>
-                      <button onClick={() => updateEditQty(item.id, 1)}
-                        className="w-6 h-6 flex items-center justify-center rounded-lg text-xs font-bold"
-                        style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-                        <Plus size={10} />
-                      </button>
-                      <button onClick={() => removeEditItem(item.id)}
-                        className="w-6 h-6 flex items-center justify-center rounded-lg ml-1"
-                        style={{ background: 'rgba(239,68,68,0.08)', color: '#F87171' }}>
-                        <X size={10} />
-                      </button>
-                    </div>
-                  ) : (
-                    <span className="text-sm font-bold" style={{ color: '#10B981' }}>
-                      {formatCurrency(item.unit_price * item.quantity)}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Total */}
-          <div className="rounded-xl p-4" style={{ background: isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.2)' }}>
-            <div className="flex justify-between mb-2">
-              <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Subtotal</span>
-              <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{formatCurrency(displaySubtotal)}</span>
-            </div>
-            {(order.delivery_fee ?? 0) > 0 && (
-              <div className="flex justify-between mb-2">
-                <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Taxa de Entrega</span>
-                <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{formatCurrency(order.delivery_fee)}</span>
-              </div>
-            )}
-            <div className="flex justify-between pt-3" style={{ borderTop: '1px solid rgba(99,102,241,0.2)' }}>
-              <span className="text-base font-bold" style={{ color: '#6366F1' }}>Total</span>
-              <span className="text-lg font-bold" style={{ color: '#6366F1' }}>{formatCurrency(displayTotal)}</span>
-            </div>
-          </div>
-
-          {/* Pagamento */}
-          <div>
-            <div className="flex items-center gap-3"><p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#10B981" }}>Pagamento</p><div className="flex-1 h-px" style={{ background: "var(--border)" }} /></div>
-            {editing ? (
-              <div className="mt-3">
-                <select value={editPayment} onChange={e => setEditPayment(e.target.value)}
-                  className="w-full rounded-xl text-sm outline-none"
-                  style={{ padding: '0.6rem 0.875rem', background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}
-                  onFocus={e => (e.currentTarget.style.borderColor = '#10B981')}
-                  onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')}>
-                  {Object.entries(PAYMENT_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                </select>
-              </div>
-            ) : (
-              <div className="mt-3 p-3 rounded-xl inline-flex items-center gap-2"
-                style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
-                <PayIcon size={14} style={{ color: '#10B981' }} />
-                <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                  {PAYMENT_LABELS[order.payment_method] ?? order.payment_method}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Observações */}
-          <div>
-            <div className="flex items-center gap-3"><p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color: "#6B7280" }}>Observações</p><div className="flex-1 h-px" style={{ background: "var(--border)" }} /></div>
-            {editing ? (
-              <textarea value={editNotes} onChange={e => setEditNotes(e.target.value)}
-                className="mt-3 w-full rounded-xl text-sm outline-none resize-none"
-                style={{ padding: '0.6rem 0.875rem', background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)', minHeight: 70 }}
-                placeholder="Observações do pedido..."
-                onFocus={e => (e.currentTarget.style.borderColor = '#6B7280')}
-                onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')} />
-            ) : order.notes ? (
-              <div className="mt-3 p-4 rounded-xl" style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
-                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{order.notes}</p>
-              </div>
-            ) : (
-              <p className="mt-2 text-xs italic" style={{ color: 'var(--text-muted)' }}>Nenhuma observação</p>
-            )}
-          </div>
-
-        </div>
-      </ModalShell>
-    </ModalBackdrop>
-  );
+function useIsDark(): boolean {
+  if (typeof window === 'undefined') return true;
+  return (getComputedStyle(document.documentElement).getPropertyValue('--bg') || '').trim().startsWith('#08');
 }
+
+// ─── Order type config ────────────────────────────────────────────────────────
+const ORDER_TYPE_ICON: Record<string, React.FC<any>> = {
+  delivery: Truck, pickup: Package, table: UtensilsCrossed,
+};
+const ORDER_TYPE_LABELS: Record<string, string> = {
+  delivery: 'Delivery', pickup: 'Retirada', table: 'No local',
+};
 
 // ─── Status config ────────────────────────────────────────────────────────────
 const STATUS_CFG: Record<string, { label: string; dot: string; bgD: string; bgL: string; txD: string; txL: string }> = {
   pending: { label: 'Pendente', dot: '#F59E0B', bgD: 'rgba(245,158,11,0.15)', bgL: 'rgba(245,158,11,0.1)', txD: '#FCD34D', txL: '#92400E' },
   confirmed: { label: 'Confirmado', dot: '#3B82F6', bgD: 'rgba(59,130,246,0.15)', bgL: 'rgba(59,130,246,0.1)', txD: '#93C5FD', txL: '#1E40AF' },
   preparing: { label: 'Preparando', dot: '#8B5CF6', bgD: 'rgba(139,92,246,0.15)', bgL: 'rgba(139,92,246,0.1)', txD: '#C4B5FD', txL: '#5B21B6' },
-  out_for_delivery: { label: 'Saiu para entrega', dot: '#6366F1', bgD: 'rgba(99,102,241,0.15)', bgL: 'rgba(99,102,241,0.1)', txD: '#A5B4FC', txL: '#3730A3' },
+  out_for_delivery: { label: 'Saiu p/ entrega', dot: '#6366F1', bgD: 'rgba(99,102,241,0.15)', bgL: 'rgba(99,102,241,0.1)', txD: '#A5B4FC', txL: '#3730A3' },
   delivered: { label: 'Entregue', dot: '#10B981', bgD: 'rgba(16,185,129,0.15)', bgL: 'rgba(16,185,129,0.1)', txD: '#6EE7B7', txL: '#065F46' },
   finished: { label: 'Finalizado', dot: '#10B981', bgD: 'rgba(16,185,129,0.15)', bgL: 'rgba(16,185,129,0.1)', txD: '#6EE7B7', txL: '#065F46' },
   cancelled: { label: 'Cancelado', dot: '#EF4444', bgD: 'rgba(239,68,68,0.15)', bgL: 'rgba(239,68,68,0.1)', txD: '#FCA5A5', txL: '#991B1B' },
 };
 
-const STATUS_TABS: { value: OrderStatus | 'all'; label: string; icon: React.FC<any>; color: string }[] = [
-  { value: 'all', label: 'Todos', icon: ShoppingCart, color: '#6366F1' },
-  { value: 'pending', label: 'Pendentes', icon: Clock, color: '#F59E0B' },
-  { value: 'confirmed', label: 'Confirmados', icon: CheckCircle2, color: '#3B82F6' },
-  { value: 'preparing', label: 'Preparando', icon: RotateCcw, color: '#8B5CF6' },
-  { value: 'out_for_delivery', label: 'Em entrega', icon: Truck, color: '#6366F1' },
-  { value: 'delivered', label: 'Entregues', icon: CheckCircle2, color: '#10B981' },
-  { value: 'cancelled', label: 'Cancelados', icon: XCircle, color: '#EF4444' },
+const STATUS_TABS: { value: OrderStatus | 'all'; label: string }[] = [
+  { value: 'all', label: 'Todos' },
+  { value: 'pending', label: 'Pendentes' },
+  { value: 'confirmed', label: 'Confirmados' },
+  { value: 'preparing', label: 'Preparando' },
+  { value: 'out_for_delivery', label: 'Em entrega' },
+  { value: 'delivered', label: 'Entregues' },
+  { value: 'cancelled', label: 'Cancelados' },
 ];
 
-const ORDER_TYPE_ICON: Record<string, React.FC<any>> = {
-  delivery: Truck,
-  pickup: Package,
-  table: UtensilsCrossed,
+const PAYMENT_LABELS: Record<string, string> = {
+  cash: 'Dinheiro', credit_card: 'Cartão Crédito', debit_card: 'Cartão Débito',
+  pix: 'PIX', meal_voucher: 'Vale Refeição', other: 'Outro',
+};
+const PAYMENT_ICONS: Record<string, React.FC<any>> = {
+  cash: Banknote, credit_card: CreditCard, debit_card: Wallet,
+  pix: Smartphone, meal_voucher: CreditCard, other: DollarSign,
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -977,9 +511,276 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+// ─── OrderDetailsModal (igual ao original, sem mudança) ───────────────────────
+function OrderDetailsModal({ order: initialOrder, onClose, onStatusChange, canEdit, canChangeStatus, canDelete }: {
+  order: any; onClose: () => void; onStatusChange: () => void;
+  canEdit: boolean; canChangeStatus: boolean; canDelete: boolean;
+}) {
+  const isDark = useIsDark();
+  const [order, setOrder] = useState<any>(initialOrder);
+  const [updating, setUpdating] = useState(false);
+  const [markingPaid, setMarkingPaid] = useState(false);
+  const [items, setItems] = useState<any[]>([]);
+  const [loadingItems, setLoadingItems] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [editItems, setEditItems] = useState<any[]>([]);
+  const [editPayment, setEditPayment] = useState(order.payment_method);
+  const [editNotes, setEditNotes] = useState(order.notes ?? '');
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  useEffect(() => {
+    supabase.schema('orders').from('order_items').select('*').eq('order_id', order.id)
+      .then(({ data }) => { if (data) { setItems(data); setEditItems(data.map((i: any) => ({ ...i }))); } setLoadingItems(false); });
+  }, [order.id]);
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (!canChangeStatus) return;
+    setUpdating(true);
+    try {
+      const { error } = await supabase.schema('orders').from('orders').update({ status: newStatus }).eq('id', order.id);
+      if (error) throw error;
+      setOrder((o: any) => ({ ...o, status: newStatus }));
+      onStatusChange();
+    } catch (err: any) { alert(err.message); }
+    finally { setUpdating(false); }
+  };
+
+  const handleMarkPaid = async () => {
+    setMarkingPaid(true);
+    try {
+      const { error } = await supabase.schema('orders').from('orders').update({ payment_status: 'paid' }).eq('id', order.id);
+      if (error) throw error;
+      setOrder((o: any) => ({ ...o, payment_status: 'paid' }));
+      onStatusChange();
+    } catch (err: any) { alert(err.message); }
+    finally { setMarkingPaid(false); }
+  };
+
+  const updateEditQty = (id: string, delta: number) =>
+    setEditItems(prev => prev.map(i => i.id === id
+      ? { ...i, quantity: Math.max(1, i.quantity + delta), subtotal: i.unit_price * Math.max(1, i.quantity + delta) } : i));
+  const removeEditItem = (id: string) => setEditItems(prev => prev.filter(i => i.id !== id));
+
+  const handleSaveEdit = async () => {
+    if (!canEdit) return;
+    setSavingEdit(true);
+    try {
+      if (editItems.length === 0) { alert('O pedido precisa ter pelo menos 1 item.'); return; }
+      for (const item of editItems) {
+        const original = items.find(i => i.id === item.id);
+        if (original && original.quantity !== item.quantity) {
+          const { error } = await supabase.schema('orders').from('order_items')
+            .update({ quantity: item.quantity, subtotal: item.unit_price * item.quantity }).eq('id', item.id);
+          if (error) throw error;
+        }
+      }
+      const removedIds = items.filter(i => !editItems.find(e => e.id === i.id)).map(i => i.id);
+      if (removedIds.length > 0) {
+        const { error } = await supabase.schema('orders').from('order_items').delete().in('id', removedIds);
+        if (error) throw error;
+      }
+      const newSubtotal = editItems.reduce((s, i) => s + i.unit_price * i.quantity, 0);
+      const newTotal = newSubtotal + (order.delivery_fee ?? 0) - (order.discount ?? 0);
+      const { error: orderErr } = await supabase.schema('orders').from('orders')
+        .update({ payment_method: editPayment, notes: editNotes || null, subtotal: newSubtotal, total: newTotal })
+        .eq('id', order.id);
+      if (orderErr) throw orderErr;
+      setOrder((o: any) => ({ ...o, payment_method: editPayment, notes: editNotes, subtotal: newSubtotal, total: newTotal }));
+      setItems(editItems); setEditing(false); onStatusChange();
+    } catch (err: any) { alert(err.message ?? 'Erro ao salvar'); }
+    finally { setSavingEdit(false); }
+  };
+
+  const statusFlow = ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'delivered'];
+  const currentIndex = statusFlow.indexOf(order.status);
+  const nextStatus = statusFlow[currentIndex + 1];
+  const prevStatus = statusFlow[currentIndex - 1];
+  const isTable = order.type === 'table' || order.order_type === 'table';
+  const isPaid = order.payment_status === 'paid';
+  const PayIcon = PAYMENT_ICONS[order.payment_method] ?? DollarSign;
+  const displayItems = editing ? editItems : items;
+  const displaySubtotal = editing ? editItems.reduce((s, i) => s + i.unit_price * i.quantity, 0) : order.subtotal;
+  const displayTotal = displaySubtotal + (order.delivery_fee ?? 0) - (order.discount ?? 0);
+
+  return (
+    <ModalBackdrop onClose={onClose}>
+      <ModalShell maxW="max-w-2xl">
+        <ModalHeader title={`Pedido #${order.order_number || order.id.slice(0, 6)}`}
+          subtitle={`Criado em ${new Date(order.created_at).toLocaleString('pt-BR')}`}
+          icon={ShoppingCart} onClose={onClose} />
+        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+
+          {isTable && !isPaid && (
+            <div className="flex items-center gap-3 p-3 rounded-xl"
+              style={{ background: isDark ? 'rgba(245,158,11,0.08)' : 'rgba(245,158,11,0.06)', border: `1px solid ${isDark ? 'rgba(245,158,11,0.25)' : 'rgba(245,158,11,0.2)'}` }}>
+              <AlertTriangle size={16} style={{ color: '#F59E0B', flexShrink: 0 }} />
+              <div className="flex-1">
+                <p className="text-xs font-bold" style={{ color: isDark ? '#FCD34D' : '#92400E' }}>Pagamento pendente</p>
+              </div>
+              {canChangeStatus && (
+                <button onClick={handleMarkPaid} disabled={markingPaid}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-60"
+                  style={{ background: 'linear-gradient(135deg,#10B981,#059669)' }}>
+                  {markingPaid ? <Loader2 size={12} className="animate-spin" /> : <CheckSquare size={12} />}
+                  Marcar como pago
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Status */}
+          <div>
+            <div className="flex items-center gap-3 mb-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#6366F1' }}>Status</p>
+              <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusBadge status={order.status} />
+              {canChangeStatus && prevStatus && (
+                <button onClick={() => handleStatusChange(prevStatus)} disabled={updating}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50"
+                  style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+                  ← Voltar
+                </button>
+              )}
+              {canChangeStatus && nextStatus && (
+                <button onClick={() => handleStatusChange(nextStatus)} disabled={updating}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
+                  style={{ background: 'linear-gradient(135deg,#10B981,#059669)' }}>
+                  {updating ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                  Avançar →
+                </button>
+              )}
+              {canChangeStatus && order.status !== 'delivered' && (
+                <button onClick={() => handleStatusChange('delivered')} disabled={updating}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50"
+                  style={{ background: 'rgba(16,185,129,0.08)', color: '#10B981', border: '1px solid rgba(16,185,129,0.2)' }}>
+                  <CheckCircle2 size={12} /> Marcar entregue
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Cliente */}
+          <div>
+            <div className="flex items-center gap-3 mb-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#8B5CF6' }}>Cliente</p>
+              <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
+            </div>
+            <div className="p-4 rounded-xl" style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                {order.customer?.name || (isTable && order.table_number ? `Mesa ${order.table_number}` : 'Cliente não informado')}
+              </p>
+              {order.customer?.phone && <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}><Phone size={10} className="inline mr-1" />{order.customer.phone}</p>}
+            </div>
+          </div>
+
+          {/* Itens */}
+          <div>
+            <div className="flex items-center gap-3 mb-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#F59E0B' }}>Itens</p>
+              <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
+              {canEdit && !editing && (
+                <button onClick={() => setEditing(true)}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold"
+                  style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                  <Edit2 size={11} /> Editar
+                </button>
+              )}
+              {editing && (
+                <div className="flex gap-1.5">
+                  <button onClick={() => { setEditing(false); setEditItems(items.map(i => ({ ...i }))); }}
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-semibold"
+                    style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>Cancelar</button>
+                  <button onClick={handleSaveEdit} disabled={savingEdit}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold text-white disabled:opacity-60"
+                    style={{ background: 'linear-gradient(135deg,#6366F1,#8B5CF6)' }}>
+                    {savingEdit ? <Loader2 size={11} className="animate-spin" /> : <CheckCircle2 size={11} />} Salvar
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="space-y-2">
+              {loadingItems ? (
+                <div className="text-center py-4"><Loader2 size={20} className="animate-spin mx-auto" style={{ color: 'var(--text-muted)' }} /></div>
+              ) : displayItems.map(item => (
+                <div key={item.id} className="flex items-center gap-3 p-3 rounded-xl"
+                  style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{item.product_name}</p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{formatCurrency(item.unit_price)} × {item.quantity}</p>
+                  </div>
+                  {editing ? (
+                    <div className="flex items-center gap-1.5">
+                      <button onClick={() => updateEditQty(item.id, -1)} className="w-6 h-6 flex items-center justify-center rounded-lg text-xs font-bold" style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}><Minus size={10} /></button>
+                      <span className="text-sm font-bold w-5 text-center" style={{ color: 'var(--text-primary)' }}>{item.quantity}</span>
+                      <button onClick={() => updateEditQty(item.id, 1)} className="w-6 h-6 flex items-center justify-center rounded-lg text-xs font-bold" style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}><Plus size={10} /></button>
+                      <button onClick={() => removeEditItem(item.id)} className="w-6 h-6 flex items-center justify-center rounded-lg ml-1" style={{ background: 'rgba(239,68,68,0.08)', color: '#F87171' }}><X size={10} /></button>
+                    </div>
+                  ) : (
+                    <span className="text-sm font-bold" style={{ color: '#10B981' }}>{formatCurrency(item.unit_price * item.quantity)}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Total */}
+          <div className="rounded-xl p-4" style={{ background: isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.2)' }}>
+            <div className="flex justify-between mb-2"><span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Subtotal</span><span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{formatCurrency(displaySubtotal)}</span></div>
+            {(order.delivery_fee ?? 0) > 0 && (
+              <div className="flex justify-between mb-2"><span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Taxa Entrega</span><span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{formatCurrency(order.delivery_fee)}</span></div>
+            )}
+            <div className="flex justify-between pt-3" style={{ borderTop: '1px solid rgba(99,102,241,0.2)' }}>
+              <span className="text-base font-bold" style={{ color: '#6366F1' }}>Total</span>
+              <span className="text-lg font-bold" style={{ color: '#6366F1' }}>{formatCurrency(displayTotal)}</span>
+            </div>
+          </div>
+
+          {/* Pagamento */}
+          <div>
+            <div className="flex items-center gap-3 mb-3"><p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#10B981' }}>Pagamento</p><div className="flex-1 h-px" style={{ background: 'var(--border)' }} /></div>
+            {editing ? (
+              <select value={editPayment} onChange={e => setEditPayment(e.target.value)}
+                className="w-full rounded-xl text-sm outline-none"
+                style={{ padding: '0.6rem 0.875rem', background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}>
+                {Object.entries(PAYMENT_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            ) : (
+              <div className="p-3 rounded-xl inline-flex items-center gap-2" style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
+                <PayIcon size={14} style={{ color: '#10B981' }} />
+                <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{PAYMENT_LABELS[order.payment_method] ?? order.payment_method}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Observações */}
+          {(order.notes || editing) && (
+            <div>
+              <div className="flex items-center gap-3 mb-3"><p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#6B7280' }}>Observações</p><div className="flex-1 h-px" style={{ background: 'var(--border)' }} /></div>
+              {editing ? (
+                <textarea value={editNotes} onChange={e => setEditNotes(e.target.value)}
+                  className="w-full rounded-xl text-sm outline-none resize-none"
+                  style={{ padding: '0.6rem 0.875rem', background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)', minHeight: 70 }} />
+              ) : (
+                <div className="p-4 rounded-xl" style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
+                  <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{order.notes}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </ModalShell>
+    </ModalBackdrop>
+  );
+}
+
+// ─── Main OrdersView ──────────────────────────────────────────────────────────
 export function OrdersView() {
   const isDark = useIsDark();
   const { store } = useStore();
+  const { can, canOrderType, allowedOrderTypes, userRole } = useStaff();
+
   const [selectedStatus, setSelectedStatus] = useState<OrderStatus | 'all'>('all');
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -988,30 +789,51 @@ export function OrdersView() {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [typeFilter, setTypeFilter] = useState<StaffOrderType | 'all'>('all');
   const itemsPerPage = 20;
+
   const { orders, loading, refetch } = useOrders(selectedStatus === 'all' ? undefined : (selectedStatus as any));
 
-  const filtered = orders.filter(o =>
-    o.id.toLowerCase().includes(search.toLowerCase()) ||
-    (o as any).customer?.name?.toLowerCase().includes(search.toLowerCase()) ||
-    (o as any).customer_name?.toLowerCase().includes(search.toLowerCase()) ||
-    String((o as any).order_number ?? '').includes(search)
+  // Tipos de pedido que este membro pode VISUALIZAR
+  const viewableTypes = allowedOrderTypes('view');
+  const hasTypeRestriction = viewableTypes !== null;
+
+  // Tabs de tipo disponíveis (apenas os que o membro pode ver)
+  const availableTypes: StaffOrderType[] = (['delivery', 'pickup', 'table'] as StaffOrderType[]).filter(t =>
+    canOrderType('view', t)
   );
+
+  // Filtragem
+  const filtered = orders.filter(o => {
+    // 1. Filtro de tipo por permissão do cargo
+    const orderType = ((o as any).order_type ?? (o as any).type) as StaffOrderType;
+    if (!canOrderType('view', orderType)) return false;
+    // 2. Filtro de tipo escolhido pelo usuário
+    if (typeFilter !== 'all' && orderType !== typeFilter) return false;
+    // 3. Filtro de busca
+    if (search) {
+      const q = search.toLowerCase();
+      return (
+        o.id.toLowerCase().includes(q) ||
+        (o as any).customer?.name?.toLowerCase().includes(q) ||
+        (o as any).customer_name?.toLowerCase().includes(q) ||
+        String((o as any).order_number ?? '').includes(q)
+      );
+    }
+    return true;
+  });
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedOrders = filtered.slice(startIndex, startIndex + itemsPerPage);
 
-  // Reset to page 1 when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedStatus, search]);
+  useEffect(() => { setCurrentPage(1); }, [selectedStatus, search, typeFilter]);
 
   const stats = {
-    total: orders.length,
-    pending: orders.filter(o => (o.status as string) === 'pending').length,
-    delivering: orders.filter(o => (o.status as string) === 'out_for_delivery').length,
-    done: orders.filter(o => (o.status as string) === 'delivered').length,
+    total: filtered.length,
+    pending: filtered.filter(o => (o.status as string) === 'pending').length,
+    delivering: filtered.filter(o => (o.status as string) === 'out_for_delivery').length,
+    done: filtered.filter(o => (o.status as string) === 'delivered').length,
   };
 
   if (loading) return (
@@ -1020,31 +842,52 @@ export function OrdersView() {
     </div>
   );
 
+  const canCreate = can('perm_orders_create' as any);
+  const canEdit = can('perm_orders_edit' as any) || can('perm_orders_change_status' as any);
+  const canDelete = can('perm_orders_delete' as any);
+
   return (
     <div className="space-y-5">
-
-      {/* Header */}
       <PageHeader
         title="Pedidos"
-        subtitle="Gerencie todos os pedidos da loja"
+        subtitle={
+          hasTypeRestriction && viewableTypes!.length > 0
+            ? `Visualizando: ${viewableTypes!.map(t => ORDER_TYPE_LABELS[t]).join(', ')}`
+            : 'Gerencie todos os pedidos da loja'
+        }
         action={
-          <Button onClick={() => setShowModal(true)} icon={<ShoppingCart size={15} />}>
-            Novo Pedido
-          </Button>
+          canCreate ? (
+            <Button onClick={() => setShowModal(true)} icon={<ShoppingCart size={15} />}>
+              Novo Pedido
+            </Button>
+          ) : undefined
         }
       />
 
-      {/* Stats strip */}
+      {/* Aviso de restrição de tipo */}
+      {hasTypeRestriction && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl"
+          style={{ background: isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.2)' }}>
+          <ShieldAlert size={15} style={{ color: '#818CF8', flexShrink: 0 }} />
+          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+            Seu cargo permite visualizar apenas:{' '}
+            <strong style={{ color: '#a5b4fc' }}>
+              {viewableTypes!.length === 0 ? 'nenhum tipo' : viewableTypes!.map(t => ORDER_TYPE_LABELS[t]).join(', ')}
+            </strong>
+          </p>
+        </div>
+      )}
+
+      {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'Total', value: stats.total, color: '#6366F1', icon: ShoppingCart },
+          { label: 'Visíveis', value: stats.total, color: '#6366F1', icon: ShoppingCart },
           { label: 'Pendentes', value: stats.pending, color: '#F59E0B', icon: Clock },
           { label: 'Em entrega', value: stats.delivering, color: '#6366F1', icon: Truck },
           { label: 'Entregues', value: stats.done, color: '#10B981', icon: CheckCircle2 },
         ].map(({ label, value, color, icon: Icon }) => (
           <Card key={label} className="px-4 py-3 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-              style={{ background: `${color}15` }}>
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: `${color}15` }}>
               <Icon size={15} style={{ color }} />
             </div>
             <div>
@@ -1055,37 +898,70 @@ export function OrdersView() {
         ))}
       </div>
 
-      {/* Filters bar */}
-      <Card className="p-4 flex flex-col sm:flex-row gap-3">
-        {/* Search */}
-        <div className="relative flex-1">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-            style={{ color: 'var(--text-muted)' }} />
-          <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar por pedido, cliente..."
-            className="w-full pl-9 pr-4 py-2 text-sm rounded-xl outline-none transition-all"
-            style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}
-            onFocus={e => (e.currentTarget.style.borderColor = '#6366F1')}
-            onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')} />
+      {/* Filters */}
+      <Card className="p-4 space-y-3">
+        {/* Search + status */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-muted)' }} />
+            <input value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar por pedido, cliente..."
+              className="w-full pl-9 pr-4 py-2 text-sm rounded-xl outline-none transition-all"
+              style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }}
+              onFocus={e => (e.currentTarget.style.borderColor = '#6366F1')}
+              onBlur={e => (e.currentTarget.style.borderColor = 'var(--input-border)')} />
+          </div>
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+            {STATUS_TABS.map(({ value, label }) => {
+              const active = selectedStatus === value;
+              return (
+                <button key={value} onClick={() => setSelectedStatus(value)}
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all"
+                  style={{
+                    background: active ? 'rgba(99,102,241,0.2)' : 'var(--input-bg)',
+                    color: active ? '#818CF8' : 'var(--text-muted)',
+                    border: `1px solid ${active ? 'rgba(99,102,241,0.4)' : 'var(--input-border)'}`,
+                  }}>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Status tabs (scrollable) */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
-          {STATUS_TABS.map(({ value, label, color }) => {
-            const active = selectedStatus === value;
-            return (
-              <button key={value} onClick={() => setSelectedStatus(value)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all"
+        {/* Filtro de tipo — só mostra os tipos permitidos */}
+        {availableTypes.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Filter size={12} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+            <div className="flex gap-1.5 overflow-x-auto">
+              <button
+                onClick={() => setTypeFilter('all')}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all"
                 style={{
-                  background: active ? `${color}20` : 'var(--input-bg)',
-                  color: active ? color : 'var(--text-muted)',
-                  border: `1px solid ${active ? `${color}40` : 'var(--input-border)'}`,
+                  background: typeFilter === 'all' ? 'rgba(99,102,241,0.15)' : 'var(--input-bg)',
+                  color: typeFilter === 'all' ? '#818CF8' : 'var(--text-muted)',
+                  border: `1px solid ${typeFilter === 'all' ? 'rgba(99,102,241,0.3)' : 'var(--border)'}`,
                 }}>
-                {label}
+                Todos os tipos
               </button>
-            );
-          })}
-        </div>
+              {availableTypes.map(type => {
+                const Icon = ORDER_TYPE_ICON[type];
+                const active = typeFilter === type;
+                return (
+                  <button key={type} onClick={() => setTypeFilter(type)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all"
+                    style={{
+                      background: active ? 'rgba(99,102,241,0.15)' : 'var(--input-bg)',
+                      color: active ? '#818CF8' : 'var(--text-muted)',
+                      border: `1px solid ${active ? 'rgba(99,102,241,0.3)' : 'var(--border)'}`,
+                    }}>
+                    <Icon size={11} /> {ORDER_TYPE_LABELS[type]}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Table */}
@@ -1102,7 +978,10 @@ export function OrdersView() {
             </thead>
             <tbody>
               {paginatedOrders.map((order: any) => {
-                const TypeIcon = ORDER_TYPE_ICON[order.order_type] ?? Package;
+                const orderType = ((order as any).order_type ?? (order as any).type) as StaffOrderType;
+                const TypeIcon = ORDER_TYPE_ICON[orderType] ?? Package;
+                const userCanEdit = canEdit && canOrderType('edit', orderType);
+                const userCanDelete = canDelete && canOrderType('delete', orderType);
                 return (
                   <tr key={order.id} className="transition-colors"
                     style={{ borderBottom: '1px solid var(--border-soft)' }}
@@ -1122,21 +1001,17 @@ export function OrdersView() {
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-2">
                         <TypeIcon size={14} style={{ color: 'var(--text-muted)' }} />
-                        <span className="text-xs capitalize" style={{ color: 'var(--text-secondary)' }}>
-                          {order.order_type?.replace('_', ' ')}
-                        </span>
+                        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{ORDER_TYPE_LABELS[orderType] ?? orderType}</span>
                       </div>
                     </td>
                     <td className="px-5 py-4"><StatusBadge status={order.status} /></td>
                     <td className="px-5 py-4">
                       <div className="flex flex-col gap-1">
-                        <span className="font-bold" style={{ color: 'var(--text-primary)' }}>
-                          {formatCurrency(order.total)}
-                        </span>
+                        <span className="font-bold" style={{ color: 'var(--text-primary)' }}>{formatCurrency(order.total)}</span>
                         {(order.type === 'table' || order.order_type === 'table') && order.payment_status === 'unpaid' && (
                           <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold w-max"
                             style={{ background: 'rgba(245,158,11,0.15)', color: '#F59E0B' }}>
-                            <span className="w-1 h-1 rounded-full bg-amber-400" />A pagar
+                            <span className="w-1 h-1 rounded-full bg-amber-400" /> A pagar
                           </span>
                         )}
                       </div>
@@ -1158,13 +1033,15 @@ export function OrdersView() {
                           onMouseLeave={e => Object.assign((e.currentTarget as HTMLElement).style, { background: 'transparent', color: 'var(--text-muted)' })}>
                           <Eye size={15} />
                         </button>
-                        <button onClick={() => { setSelectedOrder(order); setShowDeleteModal(true); }}
-                          className="w-8 h-8 flex items-center justify-center rounded-xl transition-all"
-                          style={{ color: 'var(--text-muted)' }}
-                          onMouseEnter={e => Object.assign((e.currentTarget as HTMLElement).style, { background: 'rgba(239,68,68,0.12)', color: '#F87171' })}
-                          onMouseLeave={e => Object.assign((e.currentTarget as HTMLElement).style, { background: 'transparent', color: 'var(--text-muted)' })}>
-                          <X size={15} />
-                        </button>
+                        {userCanDelete && (
+                          <button onClick={() => { setSelectedOrder(order); setShowDeleteModal(true); }}
+                            className="w-8 h-8 flex items-center justify-center rounded-xl transition-all"
+                            style={{ color: 'var(--text-muted)' }}
+                            onMouseEnter={e => Object.assign((e.currentTarget as HTMLElement).style, { background: 'rgba(239,68,68,0.12)', color: '#F87171' })}
+                            onMouseLeave={e => Object.assign((e.currentTarget as HTMLElement).style, { background: 'transparent', color: 'var(--text-muted)' })}>
+                            <X size={15} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -1177,73 +1054,62 @@ export function OrdersView() {
         {filtered.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <ShoppingCart size={32} style={{ color: 'var(--text-muted)', opacity: 0.4 }} />
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Nenhum pedido encontrado</p>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+              {hasTypeRestriction && viewableTypes!.length === 0
+                ? 'Seu cargo não tem permissão para visualizar nenhum tipo de pedido.'
+                : 'Nenhum pedido encontrado'}
+            </p>
           </div>
         )}
 
-        {/* Pagination */}
+        {/* Paginação */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-5 py-4" style={{ borderTop: '1px solid var(--border)' }}>
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-              Mostrando {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filtered.length)} de {filtered.length}
+              {startIndex + 1}–{Math.min(startIndex + itemsPerPage, filtered.length)} de {filtered.length}
             </p>
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
-                Anterior
-              </button>
-              <div className="flex items-center gap-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className="w-8 h-8 rounded-lg text-xs font-semibold transition-all"
-                    style={{
-                      background: currentPage === page ? '#6366F1' : 'var(--input-bg)',
-                      color: currentPage === page ? '#fff' : 'var(--text-secondary)',
-                      border: `1px solid ${currentPage === page ? '#6366F1' : 'var(--border)'}`,
-                    }}>
-                    {page}
-                  </button>
-                ))}
-              </div>
-              <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
-                Próxima
-              </button>
+              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40"
+                style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>Anterior</button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                <button key={page} onClick={() => setCurrentPage(page)}
+                  className="w-8 h-8 rounded-lg text-xs font-semibold"
+                  style={{ background: currentPage === page ? '#6366F1' : 'var(--input-bg)', color: currentPage === page ? '#fff' : 'var(--text-secondary)', border: `1px solid ${currentPage === page ? '#6366F1' : 'var(--border)'}` }}>
+                  {page}
+                </button>
+              ))}
+              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40"
+                style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>Próxima</button>
             </div>
           </div>
         )}
       </Card>
 
-      {/* Modal Criar */}
+      {/* Criar pedido */}
       {showModal && store && (
         <OrderModal
           storeId={store.id}
           onClose={() => setShowModal(false)}
-          onSuccess={async () => {
-            await refetch?.();
-            setShowModal(false);
-          }}
+          onSuccess={async () => { await refetch?.(); setShowModal(false); }}
+          canCreateTypes={allowedOrderTypes('create')}
         />
       )}
 
-      {/* Modal Detalhes */}
+      {/* Details modal */}
       {showDetailsModal && selectedOrder && (
         <OrderDetailsModal
           order={selectedOrder}
           onClose={() => { setShowDetailsModal(false); setSelectedOrder(null); }}
           onStatusChange={async () => { await refetch?.(); }}
+          canEdit={canEdit && canOrderType('edit', ((selectedOrder.order_type ?? selectedOrder.type) ?? 'delivery') as StaffOrderType)}
+          canChangeStatus={can('perm_orders_change_status' as any) || canEdit}
+          canDelete={canDelete}
         />
       )}
 
-      {/* Modal Deletar */}
+      {/* Delete modal */}
       {showDeleteModal && selectedOrder && (
         <ModalBackdrop onClose={() => { setShowDeleteModal(false); setSelectedOrder(null); }}>
           <ModalShell maxW="max-w-sm">
@@ -1259,10 +1125,8 @@ export function OrdersView() {
               </div>
               <div className="flex gap-3 w-full">
                 <button onClick={() => { setShowDeleteModal(false); setSelectedOrder(null); }}
-                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all"
-                  style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
-                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--surface-hover)'}
-                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'var(--input-bg)'}>
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
+                  style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
                   Cancelar
                 </button>
                 <button onClick={async () => {
@@ -1270,14 +1134,12 @@ export function OrdersView() {
                   try {
                     const { error } = await supabase.schema('orders').from('orders').delete().eq('id', selectedOrder.id);
                     if (error) throw error;
-                    await refetch?.();
-                    setShowDeleteModal(false);
-                    setSelectedOrder(null);
+                    await refetch?.(); setShowDeleteModal(false); setSelectedOrder(null);
                   } catch (err: any) { alert(err.message); }
                   finally { setDeleting(false); }
                 }} disabled={deleting}
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
-                  style={{ background: 'linear-gradient(135deg,#EF4444,#DC2626)', boxShadow: '0 4px 14px rgba(239,68,68,0.3)' }}>
+                  style={{ background: 'linear-gradient(135deg,#EF4444,#DC2626)' }}>
                   {deleting ? <><Loader2 size={14} className="animate-spin" /> Removendo...</> : <><X size={14} /> Remover</>}
                 </button>
               </div>
