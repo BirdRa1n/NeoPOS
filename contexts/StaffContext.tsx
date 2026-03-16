@@ -10,6 +10,7 @@ export interface StaffRole {
   name: string;
   color: string;
   description: string | null;
+  is_driver: boolean;                   // ← novo: cargo de entregador
   perm_orders_view: boolean;
   perm_orders_create: boolean;
   perm_orders_edit: boolean;
@@ -26,7 +27,7 @@ export interface StaffRole {
   perm_staff_manage: boolean;
   // legado
   allowed_order_types: OrderType[] | null;
-  // novos — null = sem restrição (todos os tipos)
+  // granular por operação
   allowed_view_order_types: OrderType[] | null;
   allowed_create_order_types: OrderType[] | null;
   allowed_edit_order_types: OrderType[] | null;
@@ -49,6 +50,8 @@ interface StaffContextType {
   staffInfo: StaffMemberInfo | null;
   perms: StaffRole | null;
   loading: boolean;
+  /** true se o cargo do membro tem is_driver = true */
+  isDriver: boolean;
   can: (perm: keyof StaffRole) => boolean;
   /** null = sem restrição (todos); array vazio = nenhum permitido */
   allowedOrderTypes: (op: 'view' | 'create' | 'edit' | 'delete') => OrderType[] | null;
@@ -58,7 +61,8 @@ interface StaffContextType {
 
 const StaffContext = createContext<StaffContextType>({
   userRole: null, staffInfo: null, perms: null, loading: true,
-  can: () => false, allowedOrderTypes: () => null, canOrderType: () => false, refetch: async () => {},
+  isDriver: false,
+  can: () => false, allowedOrderTypes: () => null, canOrderType: () => false, refetch: async () => { },
 });
 
 export function StaffProvider({ children, storeId }: { children: ReactNode; storeId: string | null }) {
@@ -77,7 +81,7 @@ export function StaffProvider({ children, storeId }: { children: ReactNode; stor
 
       const { data: member } = await supabase.schema('core').from('staff_members')
         .select(`id,store_id,user_id,status,display_name,role:role_id(
-          id,name,color,description,
+          id,name,color,description,is_driver,
           perm_orders_view,perm_orders_create,perm_orders_edit,perm_orders_delete,perm_orders_change_status,
           perm_inventory_view,perm_inventory_edit,perm_catalog_view,perm_catalog_edit,
           perm_finance_view,perm_customers_view,perm_reports_view,perm_store_settings,perm_staff_manage,
@@ -88,9 +92,11 @@ export function StaffProvider({ children, storeId }: { children: ReactNode; stor
 
       if (member) {
         setUserRole('staff');
-        setStaffInfo({ id: member.id, store_id: member.store_id, user_id: member.user_id,
+        setStaffInfo({
+          id: member.id, store_id: member.store_id, user_id: member.user_id,
           status: member.status, display_name: member.display_name,
-          role: (member.role as unknown as StaffRole) ?? null });
+          role: (member.role as unknown as StaffRole) ?? null,
+        });
       } else { setUserRole(null); setStaffInfo(null); }
     } finally { setLoading(false); }
   };
@@ -122,8 +128,15 @@ export function StaffProvider({ children, storeId }: { children: ReactNode; stor
     return allowed.includes(type);
   };
 
+  // isDriver: cargo marcado como entregador
+  const isDriver = userRole === 'staff' && (staffInfo?.role?.is_driver === true);
+
   return (
-    <StaffContext.Provider value={{ userRole, staffInfo, perms: staffInfo?.role ?? null, loading, can, allowedOrderTypes, canOrderType, refetch: fetchRole }}>
+    <StaffContext.Provider value={{
+      userRole, staffInfo, perms: staffInfo?.role ?? null, loading,
+      isDriver,
+      can, allowedOrderTypes, canOrderType, refetch: fetchRole,
+    }}>
       {children}
     </StaffContext.Provider>
   );

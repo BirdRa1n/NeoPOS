@@ -1,13 +1,4 @@
 'use client';
-/**
- * RoleEditorModal — Modal de criação/edição de cargos de staff.
- * Inclui a seção "Restrições por Tipo de Pedido" com configuração
- * granular de view/create/edit/delete por tipo (delivery/pickup/table).
- *
- * Uso:
- *   import { RoleEditorModal } from '@/components/RoleEditorModal';
- *   <RoleEditorModal role={role} storeId={storeId} isDark={isDark} onClose={...} onSaved={...} />
- */
 import { useState } from 'react';
 import {
   Crown, X, AlertTriangle, Save, Check, Loader2,
@@ -24,6 +15,7 @@ export interface StaffRole {
   name: string;
   description: string | null;
   color: string;
+  is_driver: boolean;                   // ← entregador
   perm_orders_view: boolean;
   perm_orders_create: boolean;
   perm_orders_edit: boolean;
@@ -49,48 +41,64 @@ const STAFF_URL = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/staff-ma
 
 const ORDER_TYPES: { value: OrderType; label: string; icon: React.FC<any> }[] = [
   { value: 'delivery', label: 'Delivery', icon: Truck },
-  { value: 'pickup',   label: 'Retirada', icon: Package },
-  { value: 'table',    label: 'No local', icon: UtensilsCrossed },
+  { value: 'pickup', label: 'Retirada', icon: Package },
+  { value: 'table', label: 'No local', icon: UtensilsCrossed },
 ];
 
-const ORDER_OPS: { key: 'allowed_view_order_types' | 'allowed_create_order_types' | 'allowed_edit_order_types' | 'allowed_delete_order_types'; label: string; icon: React.FC<any>; perm: keyof StaffRole }[] = [
-  { key: 'allowed_view_order_types',   label: 'Visualizar',       icon: Eye,     perm: 'perm_orders_view' },
-  { key: 'allowed_create_order_types', label: 'Criar',            icon: Plus,    perm: 'perm_orders_create' },
-  { key: 'allowed_edit_order_types',   label: 'Editar / Status',  icon: Edit,    perm: 'perm_orders_edit' },
-  { key: 'allowed_delete_order_types', label: 'Excluir',          icon: Trash2,  perm: 'perm_orders_delete' },
-];
+const ORDER_OPS: {
+  key: 'allowed_view_order_types' | 'allowed_create_order_types' | 'allowed_edit_order_types' | 'allowed_delete_order_types';
+  label: string; icon: React.FC<any>; perm: keyof StaffRole;
+}[] = [
+    { key: 'allowed_view_order_types', label: 'Visualizar', icon: Eye, perm: 'perm_orders_view' },
+    { key: 'allowed_create_order_types', label: 'Criar', icon: Plus, perm: 'perm_orders_create' },
+    { key: 'allowed_edit_order_types', label: 'Editar / Status', icon: Edit, perm: 'perm_orders_edit' },
+    { key: 'allowed_delete_order_types', label: 'Excluir', icon: Trash2, perm: 'perm_orders_delete' },
+  ];
 
 const PERM_GROUPS = [
-  { label: 'Pedidos',                color: COLORS.accent,   perms: [
-    { key: 'perm_orders_view',          label: 'Visualizar' },
-    { key: 'perm_orders_create',        label: 'Criar' },
-    { key: 'perm_orders_edit',          label: 'Editar' },
-    { key: 'perm_orders_change_status', label: 'Mudar status' },
-    { key: 'perm_orders_delete',        label: 'Excluir' },
-  ]},
-  { label: 'Catálogo',              color: COLORS.purple,   perms: [
-    { key: 'perm_catalog_view', label: 'Visualizar' },
-    { key: 'perm_catalog_edit', label: 'Editar' },
-  ]},
-  { label: 'Estoque',               color: COLORS.success,  perms: [
-    { key: 'perm_inventory_view', label: 'Visualizar' },
-    { key: 'perm_inventory_edit', label: 'Editar' },
-  ]},
-  { label: 'Financeiro & Relatórios', color: COLORS.warning, perms: [
-    { key: 'perm_finance_view',   label: 'Financeiro' },
-    { key: 'perm_reports_view',   label: 'Relatórios' },
-    { key: 'perm_customers_view', label: 'Clientes' },
-  ]},
-  { label: 'Administração',         color: COLORS.danger,   perms: [
-    { key: 'perm_store_settings', label: 'Configurações da loja' },
-    { key: 'perm_staff_manage',   label: 'Gerenciar equipe' },
-  ]},
+  {
+    label: 'Pedidos', color: COLORS.accent, perms: [
+      { key: 'perm_orders_view', label: 'Visualizar' },
+      { key: 'perm_orders_create', label: 'Criar' },
+      { key: 'perm_orders_edit', label: 'Editar' },
+      { key: 'perm_orders_change_status', label: 'Mudar status' },
+      { key: 'perm_orders_delete', label: 'Excluir' },
+    ]
+  },
+  {
+    label: 'Catálogo', color: COLORS.purple, perms: [
+      { key: 'perm_catalog_view', label: 'Visualizar' },
+      { key: 'perm_catalog_edit', label: 'Editar' },
+    ]
+  },
+  {
+    label: 'Estoque', color: COLORS.success, perms: [
+      { key: 'perm_inventory_view', label: 'Visualizar' },
+      { key: 'perm_inventory_edit', label: 'Editar' },
+    ]
+  },
+  {
+    label: 'Financeiro & Relatórios', color: COLORS.warning, perms: [
+      { key: 'perm_finance_view', label: 'Financeiro' },
+      { key: 'perm_reports_view', label: 'Relatórios' },
+      { key: 'perm_customers_view', label: 'Clientes' },
+    ]
+  },
+  {
+    label: 'Administração', color: COLORS.danger, perms: [
+      { key: 'perm_store_settings', label: 'Configurações da loja' },
+      { key: 'perm_staff_manage', label: 'Gerenciar equipe' },
+    ]
+  },
 ];
 
-const COLOR_OPTIONS = [COLORS.accent, COLORS.purple, COLORS.pink, COLORS.danger, COLORS.warning, COLORS.success, COLORS.info, COLORS.cyan, COLORS.lime, COLORS.neutral];
+const COLOR_OPTIONS = [
+  COLORS.accent, COLORS.purple, COLORS.pink, COLORS.danger,
+  COLORS.warning, COLORS.success, COLORS.info, COLORS.cyan, COLORS.lime, COLORS.neutral,
+];
 
 const EMPTY_ROLE: StaffRole = {
-  name: '', description: '', color: COLORS.accent,
+  name: '', description: '', color: COLORS.accent, is_driver: false,
   perm_orders_view: false, perm_orders_create: false, perm_orders_edit: false,
   perm_orders_delete: false, perm_orders_change_status: false,
   perm_inventory_view: false, perm_inventory_edit: false,
@@ -120,20 +128,12 @@ async function staffCall(token: string, body: Record<string, unknown>) {
 }
 
 // ─── OrderTypeSelector ────────────────────────────────────────────────────────
-function OrderTypeSelector({
-  label, opKey, value, onChange, disabled, isDark,
-}: {
-  label: string;
-  opKey: string;
-  value: OrderType[] | null;
-  onChange: (v: OrderType[] | null) => void;
-  disabled?: boolean;
-  isDark: boolean;
+function OrderTypeSelector({ label, opKey, value, onChange, disabled, isDark }: {
+  label: string; opKey: string; value: OrderType[] | null;
+  onChange: (v: OrderType[] | null) => void; disabled?: boolean; isDark: boolean;
 }) {
   const isUnrestricted = value === null;
-
   const toggleAll = () => onChange(isUnrestricted ? [] : null);
-
   const toggleType = (type: OrderType) => {
     if (value === null) {
       onChange(ORDER_TYPES.map(t => t.value).filter(t => t !== type));
@@ -148,40 +148,29 @@ function OrderTypeSelector({
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <p className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{label}</p>
-        <button
-          type="button"
-          onClick={toggleAll}
-          disabled={disabled}
+        <button type="button" onClick={toggleAll} disabled={disabled}
           className="text-[10px] font-bold px-2 py-0.5 rounded-full transition-all disabled:opacity-40"
           style={{
             background: isUnrestricted ? ALPHA.successBgSubtle : ALPHA.neutralBg,
             color: isUnrestricted ? COLORS.success : 'var(--text-muted)',
             border: `1px solid ${isUnrestricted ? ALPHA.successBorder : 'var(--border)'}`,
-          }}
-        >
+          }}>
           {isUnrestricted ? '✓ Todos' : 'Restrito'}
         </button>
       </div>
-
       <div className="flex gap-2">
         {ORDER_TYPES.map(({ value: type, label: typeLabel, icon: Icon }) => {
           const isSelected = isUnrestricted || (value?.includes(type) ?? false);
           return (
-            <button
-              key={type}
-              type="button"
-              onClick={() => toggleType(type)}
-              disabled={disabled}
+            <button key={type} type="button" onClick={() => toggleType(type)} disabled={disabled}
               className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl transition-all disabled:opacity-40"
               style={{
-                background: isSelected
-                  ? (isDark ? ALPHA.accentBgD : ALPHA.accentBgL)
-                  : 'var(--input-bg)',
+                background: isSelected ? (isDark ? ALPHA.accentBgD : ALPHA.accentBgL) : 'var(--input-bg)',
                 border: `1.5px solid ${isSelected ? COLORS.accent : 'var(--border)'}`,
-              }}
-            >
+              }}>
               <Icon size={14} style={{ color: isSelected ? COLORS.accentLight : 'var(--text-muted)' }} />
-              <span className="text-[10px] font-semibold" style={{ color: isSelected ? COLORS.accentLight : 'var(--text-muted)' }}>
+              <span className="text-[10px] font-semibold"
+                style={{ color: isSelected ? COLORS.accentLight : 'var(--text-muted)' }}>
                 {typeLabel}
               </span>
             </button>
@@ -210,6 +199,7 @@ export function RoleEditorModal({ role, storeId, isDark, onClose, onSaved }: Rol
       name: role.name ?? '',
       description: role.description ?? '',
       color: role.color ?? COLORS.accent,
+      is_driver: role.is_driver ?? false,
       ...Object.fromEntries(
         Object.entries(role).filter(([k]) => k.startsWith('perm_') || k.startsWith('allowed_'))
       ),
@@ -225,15 +215,15 @@ export function RoleEditorModal({ role, storeId, isDark, onClose, onSaved }: Rol
     setSaving(true); setError('');
     try {
       const token = await getToken();
-      const normalizeTypes = (v: OrderType[] | null) =>
-        v === null || v.length === 0 ? null : v;
+      const normalizeTypes = (v: OrderType[] | null) => v === null || v.length === 0 ? null : v;
       const payload = {
         ...form,
         name: form.name.trim(),
         description: form.description?.trim() || null,
-        allowed_view_order_types:   normalizeTypes(form.allowed_view_order_types),
+        is_driver: form.is_driver,
+        allowed_view_order_types: normalizeTypes(form.allowed_view_order_types),
         allowed_create_order_types: normalizeTypes(form.allowed_create_order_types),
-        allowed_edit_order_types:   normalizeTypes(form.allowed_edit_order_types),
+        allowed_edit_order_types: normalizeTypes(form.allowed_edit_order_types),
         allowed_delete_order_types: normalizeTypes(form.allowed_delete_order_types),
       };
       if (isNew) {
@@ -246,7 +236,6 @@ export function RoleEditorModal({ role, storeId, isDark, onClose, onSaved }: Rol
     finally { setSaving(false); }
   };
 
-  // Verifica se as permissões de pedido estão ativas para habilitar os seletores
   const hasOrderPerms = form.perm_orders_view || form.perm_orders_create || form.perm_orders_edit || form.perm_orders_delete;
 
   return (
@@ -291,7 +280,7 @@ export function RoleEditorModal({ role, storeId, isDark, onClose, onSaved }: Rol
               Nome do cargo <span style={{ color: COLORS.danger }}>*</span>
             </label>
             <input value={form.name} onChange={e => setF('name', e.target.value)}
-              placeholder="Ex: Atendente, Caixa, Garçom..."
+              placeholder="Ex: Atendente, Caixa, Garçom, Entregador..."
               className="w-full rounded-xl text-sm outline-none transition-all px-3 py-2.5"
               style={{ background: 'var(--input-bg)', border: '1px solid var(--input-border)', color: 'var(--text-primary)' }} />
           </div>
@@ -312,12 +301,46 @@ export function RoleEditorModal({ role, storeId, isDark, onClose, onSaved }: Rol
               {COLOR_OPTIONS.map(c => (
                 <button key={c} type="button" onClick={() => setF('color', c)}
                   className="w-7 h-7 rounded-lg transition-all"
-                  style={{ background: c, border: form.color === c ? '3px solid var(--text-primary)' : '3px solid transparent', transform: form.color === c ? 'scale(1.15)' : 'scale(1)' }} />
+                  style={{
+                    background: c,
+                    border: form.color === c ? '3px solid var(--text-primary)' : '3px solid transparent',
+                    transform: form.color === c ? 'scale(1.15)' : 'scale(1)',
+                  }} />
               ))}
             </div>
           </div>
 
-          {/* Divisor */}
+          <div style={{ height: 1, background: 'var(--border)' }} />
+
+          {/* ── Tipo de cargo (is_driver) ── */}
+          <div className="space-y-3">
+            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+              Tipo de Cargo
+            </p>
+            <button type="button" onClick={() => setF('is_driver', !form.is_driver)}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all w-full text-left"
+              style={{
+                background: form.is_driver
+                  ? (isDark ? 'rgba(139,92,246,0.12)' : 'rgba(139,92,246,0.08)')
+                  : 'var(--input-bg)',
+                border: `1px solid ${form.is_driver ? '#8B5CF6' : 'var(--border)'}`,
+              }}>
+              <div className="w-5 h-5 rounded-md flex items-center justify-center transition-all shrink-0"
+                style={{ background: form.is_driver ? '#8B5CF6' : 'var(--border)' }}>
+                {form.is_driver && <Check size={12} color="#fff" />}
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                  Cargo de Entregador
+                </p>
+                <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                  Membros com este cargo verão a dashboard de entregador com suas estatísticas de entregas
+                </p>
+              </div>
+              <Truck size={16} style={{ color: form.is_driver ? '#8B5CF6' : 'var(--text-muted)', flexShrink: 0 }} />
+            </button>
+          </div>
+
           <div style={{ height: 1, background: 'var(--border)' }} />
 
           {/* ── Permissões gerais ── */}
@@ -335,7 +358,9 @@ export function RoleEditorModal({ role, storeId, isDark, onClose, onSaved }: Rol
                     <button key={key} type="button" onClick={() => setF(key as keyof StaffRole, !(form as any)[key])}
                       className="flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all text-left"
                       style={{
-                        background: (form as any)[key] ? (isDark ? ALPHA.accentBgSubtleD : ALPHA.accentBgSubtleL) : 'var(--input-bg)',
+                        background: (form as any)[key]
+                          ? (isDark ? ALPHA.accentBgSubtleD : ALPHA.accentBgSubtleL)
+                          : 'var(--input-bg)',
                         border: `1px solid ${(form as any)[key] ? COLORS.accent : 'var(--border)'}`,
                       }}>
                       <div className="w-4 h-4 rounded flex items-center justify-center shrink-0 transition-all"
@@ -343,7 +368,9 @@ export function RoleEditorModal({ role, storeId, isDark, onClose, onSaved }: Rol
                         {(form as any)[key] && <Check size={10} color={COLORS.white} />}
                       </div>
                       <span className="text-xs font-medium"
-                        style={{ color: (form as any)[key] ? COLORS.accentLight : 'var(--text-muted)' }}>{label}</span>
+                        style={{ color: (form as any)[key] ? COLORS.accentLight : 'var(--text-muted)' }}>
+                        {label}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -363,23 +390,25 @@ export function RoleEditorModal({ role, storeId, isDark, onClose, onSaved }: Rol
                   </p>
                 </div>
                 <p className="text-[11px] leading-relaxed" style={{ color: 'var(--text-muted)' }}>
-                  Defina quais tipos de pedido (Delivery, Retirada, No local) este cargo pode operar em cada ação.
-                  <strong style={{ color: 'var(--text-secondary)' }}> "Todos"</strong> significa sem restrição.
+                  Defina quais tipos de pedido este cargo pode operar.
+                  <strong style={{ color: 'var(--text-secondary)' }}> "Todos"</strong> = sem restrição.
                 </p>
-
                 <div className="space-y-5">
                   {ORDER_OPS.map(({ key, label, icon: Icon, perm }) => {
                     const hasPerm = (form as any)[perm];
                     return (
                       <div key={key} className="rounded-xl p-4 space-y-3"
                         style={{
-                          background: hasPerm ? (isDark ? 'rgba(99,102,241,0.05)' : 'rgba(99,102,241,0.03)') : (isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)'),
+                          background: hasPerm
+                            ? (isDark ? 'rgba(99,102,241,0.05)' : 'rgba(99,102,241,0.03)')
+                            : (isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)'),
                           border: `1px solid ${hasPerm ? ALPHA.accentBorder : 'var(--border)'}`,
                           opacity: hasPerm ? 1 : 0.5,
                         }}>
                         <div className="flex items-center gap-2">
                           <Icon size={13} style={{ color: hasPerm ? COLORS.accentLight : 'var(--text-muted)' }} />
-                          <p className="text-xs font-bold" style={{ color: hasPerm ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                          <p className="text-xs font-bold"
+                            style={{ color: hasPerm ? 'var(--text-primary)' : 'var(--text-muted)' }}>
                             {label}
                           </p>
                           {!hasPerm && (
@@ -390,8 +419,7 @@ export function RoleEditorModal({ role, storeId, isDark, onClose, onSaved }: Rol
                           )}
                         </div>
                         <OrderTypeSelector
-                          label=""
-                          opKey={key}
+                          label="" opKey={key}
                           value={(form as any)[key]}
                           onChange={v => setF(key as keyof StaffRole, v)}
                           disabled={!hasPerm}
@@ -402,19 +430,11 @@ export function RoleEditorModal({ role, storeId, isDark, onClose, onSaved }: Rol
                   })}
                 </div>
 
-                {/* Legenda */}
                 <div className="rounded-xl p-3 text-[11px] space-y-1.5"
                   style={{ background: isDark ? ALPHA.accentBgSubtleD : 'rgba(99,102,241,0.04)', border: `1px solid ${ALPHA.accentBorder}` }}>
                   <p className="font-bold" style={{ color: COLORS.accentLight }}>Como funciona?</p>
-                  <p style={{ color: 'var(--text-muted)' }}>
-                    • <strong style={{ color: 'var(--text-secondary)' }}>Todos</strong> — sem restrição, o cargo opera qualquer tipo de pedido.
-                  </p>
-                  <p style={{ color: 'var(--text-muted)' }}>
-                    • <strong style={{ color: 'var(--text-secondary)' }}>Restrito</strong> — apenas os tipos selecionados ficam visíveis/operáveis.
-                  </p>
-                  <p style={{ color: 'var(--text-muted)' }}>
-                    • Um garçom, por exemplo, pode ver e criar apenas pedidos "No local".
-                  </p>
+                  <p style={{ color: 'var(--text-muted)' }}>• <strong style={{ color: 'var(--text-secondary)' }}>Todos</strong> — sem restrição.</p>
+                  <p style={{ color: 'var(--text-muted)' }}>• <strong style={{ color: 'var(--text-secondary)' }}>Restrito</strong> — apenas os tipos selecionados ficam operáveis.</p>
                 </div>
               </div>
             </>
@@ -431,7 +451,9 @@ export function RoleEditorModal({ role, storeId, isDark, onClose, onSaved }: Rol
           <button onClick={handleSave} disabled={saving}
             className="flex-[2] flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50"
             style={{ background: COLORS.accentGradient, boxShadow: COLORS.accentShadow }}>
-            {saving ? <><Loader2 size={14} className="animate-spin" />Salvando...</> : <><Save size={14} />{isNew ? 'Criar cargo' : 'Salvar alterações'}</>}
+            {saving
+              ? <><Loader2 size={14} className="animate-spin" />Salvando...</>
+              : <><Save size={14} />{isNew ? 'Criar cargo' : 'Salvar alterações'}</>}
           </button>
         </div>
       </div>

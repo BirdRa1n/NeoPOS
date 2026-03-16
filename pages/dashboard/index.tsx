@@ -14,7 +14,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { ProductsView } from '@/components/views/ProductsView';
 import { OrdersView } from '@/components/views/OrdersView';
 import { CustomersView } from '@/components/views/CustomersView';
-import { DeliveryView } from '@/components/views/DeliveryView';
+import { DeliveryView, DriverDashboard } from '@/components/views/DeliveryView';
 import { InventoryView } from '@/components/views/InventoryView';
 import { FinanceView } from '@/components/views/FinanceView';
 import { StoreSettingsView } from '@/components/views/StoreSettingsView';
@@ -642,7 +642,7 @@ function DashboardContent({ user, store, activeTab, setActiveTab, collapsed, set
   signOut: () => void;
 }) {
   const { theme } = useTheme();
-  const { userRole, staffInfo, loading: staffLoading, can } = useStaff();
+  const { userRole, staffInfo, loading: staffLoading, can, isDriver } = useStaff();
   const { orders: pending } = useOrders('pending');
   const vars = THEMES[theme];
   const { title, subtitle } = PAGE_META[activeTab];
@@ -701,6 +701,11 @@ function DashboardContent({ user, store, activeTab, setActiveTab, collapsed, set
 
     if (perm && userRole === 'staff' && !can(perm as any)) {
       return <AccessDenied tabLabel={PAGE_META[activeTab].title} />;
+    }
+
+    // Entregador: dashboard customizada
+    if (isDriver && staffInfo?.id && activeTab === 'dashboard') {
+      return <DriverDashboard staffMemberId={staffInfo.id} />;
     }
 
     switch (activeTab) {
