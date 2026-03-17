@@ -5,6 +5,7 @@ import { useStore } from '@/contexts/StoreContext';
 
 interface UseOrdersOptions {
   onNewOrder?: (order: any) => void;
+  dateFrom?: string; // ISO string — filtra created_at >= dateFrom no servidor
 }
 
 export function useOrders(status?: OrderStatus, options?: UseOrdersOptions) {
@@ -18,20 +19,24 @@ export function useOrders(status?: OrderStatus, options?: UseOrdersOptions) {
   const fetchOrders = useCallback(async () => {
     if (!store) return;
 
-    const { data } = await supabase
+    let query = supabase
       .schema('orders')
       .from('orders_with_details')
       .select('*')
       .eq('store_id', store.id)
       .order('created_at', { ascending: false });
 
+    if (status) query = query.eq('status', status);
+    if (options?.dateFrom) query = query.gte('created_at', options.dateFrom);
+
+    const { data } = await query;
+
     if (data) {
-      const filtered = status ? data.filter((o) => o.status === status) : data;
-      setOrders(filtered);
-      ordersRef.current = filtered;
+      setOrders(data);
+      ordersRef.current = data;
     }
     setLoading(false);
-  }, [store, status]);
+  }, [store, status, options?.dateFrom]);
 
   useEffect(() => {
     if (!store) return;
@@ -61,7 +66,8 @@ export function useOrders(status?: OrderStatus, options?: UseOrdersOptions) {
             .single();
 
           if (data) {
-            const shouldInclude = !status || data.status === status;
+            const afterDate = !options?.dateFrom || data.created_at >= options.dateFrom;
+            const shouldInclude = (!status || data.status === status) && afterDate;
 
             if (shouldInclude) {
               setOrders((prev) => {

@@ -15,10 +15,10 @@ import { useDeliveryDrivers } from '@/hooks/useDelivery';
 import { useIsDark } from '@/hooks/useIsDark';
 import { useOrders } from '@/hooks/useOrders';
 import { COLORS } from '@/lib/constants';
-import type { OrderStatus } from '@/types';
 import { ORDER_TYPE_LABELS } from '@/types/orders';
 import { ShoppingCart } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import type { DateRange, FilterState } from '@/components/orders/OrderFilters';
+import { useEffect, useMemo, useState } from 'react';
 
 export function OrdersView() {
   const isDark = useIsDark();
@@ -26,10 +26,18 @@ export function OrdersView() {
   const { can, canOrderType, allowedOrderTypes } = useStaff();
   const { drivers = [] } = useDeliveryDrivers() as any;
 
-  const [selectedStatus, setSelectedStatus] = useState<OrderStatus | 'all'>('all');
   const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<StaffOrderType | 'all'>('all');
+  const [filters, setFilters] = useState<FilterState>({ selectedStatus: 'all', typeFilter: 'all', dateRange: 'today' });
   const [currentPage, setCurrentPage] = useState(1);
+
+  const dateFrom = useMemo(() => {
+    if (filters.dateRange === 'all') return undefined;
+    const d = new Date();
+    if (filters.dateRange === 'today') d.setHours(0, 0, 0, 0);
+    else if (filters.dateRange === '7d') d.setDate(d.getDate() - 7);
+    else if (filters.dateRange === '30d') d.setDate(d.getDate() - 30);
+    return d.toISOString();
+  }, [filters.dateRange]);
 
   const [showModal, setShowModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -39,7 +47,10 @@ export function OrdersView() {
   const [dispatchOrderId, setDispatchOrderId] = useState<string | null>(null);
   const [tableModal, setTableModal] = useState<any>(null);
 
-  const { orders, loading, refetch } = useOrders(selectedStatus === 'all' ? undefined : (selectedStatus as any));
+  const { orders, loading, refetch } = useOrders(
+    filters.selectedStatus === 'all' ? undefined : (filters.selectedStatus as any),
+    { dateFrom },
+  );
 
   const viewableTypes = allowedOrderTypes('view');
   const hasTypeRestriction = viewableTypes !== null;
@@ -51,7 +62,7 @@ export function OrdersView() {
   const filtered = orders.filter(o => {
     const orderType = ((o as any).order_type ?? (o as any).type) as StaffOrderType;
     if (!canOrderType('view', orderType)) return false;
-    if (typeFilter !== 'all' && orderType !== typeFilter) return false;
+    if (filters.typeFilter !== 'all' && orderType !== filters.typeFilter) return false;
     if (search) {
       const q = search.toLowerCase();
       return (
@@ -64,7 +75,7 @@ export function OrdersView() {
     return true;
   });
 
-  useEffect(() => { setCurrentPage(1); }, [selectedStatus, search, typeFilter]);
+  useEffect(() => { setCurrentPage(1); }, [filters, search]);
 
   const stats = {
     total: filtered.length,
@@ -99,8 +110,7 @@ export function OrdersView() {
 
       <OrderFilters
         search={search} onSearch={setSearch}
-        selectedStatus={selectedStatus} onStatus={setSelectedStatus}
-        typeFilter={typeFilter} onTypeFilter={setTypeFilter}
+        filters={filters} onFilters={setFilters}
         availableTypes={availableTypes}
       />
 

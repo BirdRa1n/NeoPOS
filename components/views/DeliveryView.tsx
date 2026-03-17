@@ -27,13 +27,38 @@ import {
   User,
   Users
 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { DriverModal, DriverStatsCard, OrderRow, ZoneModal } from '../delivery';
 
 type Tab = 'live' | 'zones' | 'drivers';
 const db = () => supabase.schema('core');
 
-// ─── Main View ────────────────────────────────────────────────────────────────
+// ─── Pagination ──────────────────────────────────────────────────────────────
+function Pagination({ page, total, onChange }: { page: number; total: number; onChange: (p: number) => void }) {
+  return (
+    <div className="flex items-center justify-center gap-1 px-4 py-3" style={{ borderTop: '1px solid var(--border)' }}>
+      <button onClick={() => onChange(page - 1)} disabled={page === 1}
+        className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-30"
+        style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+        ←
+      </button>
+      {Array.from({ length: total }, (_, i) => i + 1).map(p => (
+        <button key={p} onClick={() => onChange(p)}
+          className="w-7 h-7 rounded-lg text-xs font-semibold transition-all"
+          style={{
+            background: p === page ? COLORS.accent : 'var(--input-bg)',
+            border: `1px solid ${p === page ? COLORS.accent : 'var(--border)'}`,
+            color: p === page ? '#fff' : 'var(--text-muted)',
+          }}>{p}</button>
+      ))}
+      <button onClick={() => onChange(page + 1)} disabled={page === total}
+        className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all disabled:opacity-30"
+        style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+        →
+      </button>
+    </div>
+  );
+}
 export function DeliveryView() {
   const isDark = useIsDark();
   const { store } = useStore();
@@ -46,9 +71,24 @@ export function DeliveryView() {
   const [dispatchOrderId, setDispatchOrderId] = useState<string | null>(null);
   const [delLoad, setDL] = useState(false);
 
+  // Filtros e paginação — Zonas
+  const [zoneSearch, setZoneSearch] = useState('');
+  const [zoneStatusFilter, setZoneStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [zonePage, setZonePage] = useState(1);
+  const ZONE_PAGE_SIZE = 10;
+
+  // Filtros e paginação — Entregadores
+  const [driverSearch, setDriverSearch] = useState('');
+  const [driverStatusFilter, setDriverStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [driverPage, setDriverPage] = useState(1);
+  const DRIVER_PAGE_SIZE = 6;
+
+  const todayISO = useMemo(() => new Date(new Date().setHours(0, 0, 0, 0)).toISOString(), []);
+
   const { orders: delivering = [] } = useOrders('out_for_delivery' as any) as any;
   const { orders: ready = [] } = useOrders('preparing' as any) as any;
-  const { orders: delivered = [] } = useOrders('delivered' as any) as any;
+  // Só busca entregues de hoje — evita carregar histórico inteiro
+  const { orders: delivered = [] } = useOrders('delivered' as any, { dateFrom: todayISO }) as any;
   const { zones = [], refetch: refetchZones } = useDeliveryZones() as any;
   const { drivers = [], refetch: refetchDrivers } = useDeliveryDrivers() as any;
   const { stats: driverStats, loading: statsLoading, refetch: refetchStats } = useDriverStats(store?.id);
@@ -65,6 +105,30 @@ export function DeliveryView() {
 
   const open = (kind: typeof modal, item?: any) => { setSel(item ?? null); setModal(kind); };
   const close = () => { setModal(null); setSel(null); };
+
+  // Zonas filtradas + paginadas (client-side — dados pequenos)
+  const filteredZones = useMemo(() => {
+    const q = zoneSearch.toLowerCase();
+    return (zones as any[]).filter(z => {
+      const matchSearch = !q || z.neighborhood?.toLowerCase().includes(q) || z.city?.toLowerCase().includes(q);
+      const matchStatus = zoneStatusFilter === 'all' || (zoneStatusFilter === 'active' ? z.active : !z.active);
+      return matchSearch && matchStatus;
+    });
+  }, [zones, zoneSearch, zoneStatusFilter]);
+  const zoneTotalPages = Math.max(1, Math.ceil(filteredZones.length / ZONE_PAGE_SIZE));
+  const pagedZones = filteredZones.slice((zonePage - 1) * ZONE_PAGE_SIZE, zonePage * ZONE_PAGE_SIZE);
+
+  // Entregadores filtrados + paginados
+  const filteredDriverStats = useMemo(() => {
+    const q = driverSearch.toLowerCase();
+    return driverStats.filter(d => {
+      const matchSearch = !q || d.name?.toLowerCase().includes(q);
+      const matchStatus = driverStatusFilter === 'all' || (driverStatusFilter === 'active' ? d.active : !d.active);
+      return matchSearch && matchStatus;
+    });
+  }, [driverStats, driverSearch, driverStatusFilter]);
+  const driverTotalPages = Math.max(1, Math.ceil(filteredDriverStats.length / DRIVER_PAGE_SIZE));
+  const pagedDriverStats = filteredDriverStats.slice((driverPage - 1) * DRIVER_PAGE_SIZE, driverPage * DRIVER_PAGE_SIZE);
 
   const handleDeleteZone = async () => {
     setDL(true);
@@ -179,6 +243,30 @@ export function DeliveryView() {
         {tab === 'zones' && (
           <div className="rounded-2xl overflow-hidden"
             style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--surface-box)' }}>
+
+            {/* Filtros */}
+            <div className="flex flex-wrap items-center gap-2 px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+              <input
+                value={zoneSearch}
+                onChange={e => { setZoneSearch(e.target.value); setZonePage(1); }}
+                placeholder="Buscar bairro ou cidade..."
+                className="flex-1 min-w-[160px] text-xs px-3 py-2 rounded-xl outline-none"
+                style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+              />
+              {(['all', 'active', 'inactive'] as const).map(s => (
+                <button key={s} onClick={() => { setZoneStatusFilter(s); setZonePage(1); }}
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+                  style={{
+                    background: zoneStatusFilter === s ? `${COLORS.accent}18` : 'var(--input-bg)',
+                    border: `1px solid ${zoneStatusFilter === s ? COLORS.accent : 'var(--border)'}`,
+                    color: zoneStatusFilter === s ? COLORS.accentLight : 'var(--text-muted)',
+                  }}>
+                  {s === 'all' ? 'Todos' : s === 'active' ? 'Ativos' : 'Inativos'}
+                </button>
+              ))}
+              <span className="text-[11px] ml-auto" style={{ color: 'var(--text-muted)' }}>{filteredZones.length} zona{filteredZones.length !== 1 ? 's' : ''}</span>
+            </div>
+
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -189,7 +277,7 @@ export function DeliveryView() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(zones as any[]).map((zone: any) => (
+                  {pagedZones.map((zone: any) => (
                     <tr key={zone.id} className="transition-colors group" style={{ borderBottom: '1px solid var(--border-soft)' }}
                       onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--surface-hover)'}
                       onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
@@ -230,11 +318,14 @@ export function DeliveryView() {
                 </tbody>
               </table>
             </div>
-            {zones.length === 0 && (
+
+            {filteredZones.length === 0 ? (
               <div className="flex flex-col items-center py-16 gap-3">
                 <MapPin size={32} style={{ color: 'var(--text-muted)', opacity: 0.3 }} />
-                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Nenhuma zona cadastrada</p>
-                {isAdmin && (
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                  {zoneSearch || zoneStatusFilter !== 'all' ? 'Nenhuma zona encontrada' : 'Nenhuma zona cadastrada'}
+                </p>
+                {isAdmin && !zoneSearch && zoneStatusFilter === 'all' && (
                   <button onClick={() => open('zone-create')}
                     className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white hover:opacity-90"
                     style={{ background: COLORS.successGradient }}>
@@ -242,6 +333,8 @@ export function DeliveryView() {
                   </button>
                 )}
               </div>
+            ) : zoneTotalPages > 1 && (
+              <Pagination page={zonePage} total={zoneTotalPages} onChange={setZonePage} />
             )}
           </div>
         )}
@@ -270,16 +363,44 @@ export function DeliveryView() {
                 ))}
               </div>
             )}
+
+            {/* Filtros entregadores */}
+            {driverStats.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  value={driverSearch}
+                  onChange={e => { setDriverSearch(e.target.value); setDriverPage(1); }}
+                  placeholder="Buscar entregador..."
+                  className="flex-1 min-w-[160px] text-xs px-3 py-2 rounded-xl outline-none"
+                  style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                />
+                {(['all', 'active', 'inactive'] as const).map(s => (
+                  <button key={s} onClick={() => { setDriverStatusFilter(s); setDriverPage(1); }}
+                    className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+                    style={{
+                      background: driverStatusFilter === s ? `${COLORS.purple}18` : 'var(--surface)',
+                      border: `1px solid ${driverStatusFilter === s ? COLORS.purple : 'var(--border)'}`,
+                      color: driverStatusFilter === s ? COLORS.purple : 'var(--text-muted)',
+                    }}>
+                    {s === 'all' ? 'Todos' : s === 'active' ? 'Ativos' : 'Inativos'}
+                  </button>
+                ))}
+                <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>{filteredDriverStats.length} entregador{filteredDriverStats.length !== 1 ? 'es' : ''}</span>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {statsLoading ? (
                 <div className="col-span-full flex justify-center py-16">
                   <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: COLORS.accent, borderTopColor: 'transparent' }} />
                 </div>
-              ) : driverStats.length === 0 ? (
+              ) : filteredDriverStats.length === 0 ? (
                 <div className="col-span-full flex flex-col items-center py-16 gap-3">
                   <User size={32} style={{ color: 'var(--text-muted)', opacity: 0.3 }} />
-                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Nenhum entregador cadastrado</p>
-                  {isAdmin && (
+                  <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                    {driverSearch || driverStatusFilter !== 'all' ? 'Nenhum entregador encontrado' : 'Nenhum entregador cadastrado'}
+                  </p>
+                  {isAdmin && !driverSearch && driverStatusFilter === 'all' && (
                     <button onClick={() => open('driver-create')}
                       className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white hover:opacity-90"
                       style={{ background: `linear-gradient(135deg,${COLORS.purple},#7C3AED)` }}>
@@ -287,7 +408,7 @@ export function DeliveryView() {
                     </button>
                   )}
                 </div>
-              ) : driverStats.map(d => {
+              ) : pagedDriverStats.map(d => {
                 const driverRecord = (drivers as any[]).find(dr => dr.id === d.driver_id);
                 return (
                   <DriverStatsCard key={d.driver_id} stats={d} isDark={isDark} staffMembers={staffMembers} isAdmin={isAdmin}
@@ -296,6 +417,9 @@ export function DeliveryView() {
                 );
               })}
             </div>
+            {driverTotalPages > 1 && !statsLoading && (
+              <Pagination page={driverPage} total={driverTotalPages} onChange={setDriverPage} />
+            )}
           </>
         )}
       </div>

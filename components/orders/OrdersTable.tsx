@@ -7,7 +7,18 @@ import { ORDER_TYPE_ICON, ORDER_TYPE_LABELS } from '@/types/orders';
 import { OrderStatusBadge } from './OrderStatusBadge';
 import type { OrderType as StaffOrderType } from '@/contexts/StaffContext';
 
-const ITEMS_PER_PAGE = 20;
+const ITEMS_PER_PAGE = 25;
+
+// Gera páginas com ellipsis: [1, '...', 4, 5, 6, '...', 10]
+function pageNumbers(current: number, total: number): (number | '...')[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages: (number | '...')[] = [1];
+  if (current > 3) pages.push('...');
+  for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) pages.push(i);
+  if (current < total - 2) pages.push('...');
+  pages.push(total);
+  return pages;
+}
 
 interface OrdersTableProps {
   orders: any[];
@@ -170,27 +181,31 @@ export function OrdersTable({
           <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
             {startIndex + 1}–{Math.min(startIndex + ITEMS_PER_PAGE, orders.length)} de {orders.length}
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <button onClick={() => onPageChange(Math.max(1, currentPage - 1))} disabled={currentPage === 1}
               className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40"
               style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
-              Anterior
+              ←
             </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-              <button key={page} onClick={() => onPageChange(page)}
-                className="w-8 h-8 rounded-lg text-xs font-semibold"
-                style={{
-                  background: currentPage === page ? '#6366F1' : 'var(--input-bg)',
-                  color: currentPage === page ? '#fff' : 'var(--text-secondary)',
-                  border: `1px solid ${currentPage === page ? '#6366F1' : 'var(--border)'}`,
-                }}>
-                {page}
-              </button>
-            ))}
+            {pageNumbers(currentPage, totalPages).map((p, i) =>
+              p === '...' ? (
+                <span key={`e${i}`} className="w-8 text-center text-xs" style={{ color: 'var(--text-muted)' }}>…</span>
+              ) : (
+                <button key={p} onClick={() => onPageChange(p as number)}
+                  className="w-8 h-8 rounded-lg text-xs font-semibold"
+                  style={{
+                    background: currentPage === p ? '#6366F1' : 'var(--input-bg)',
+                    color: currentPage === p ? '#fff' : 'var(--text-secondary)',
+                    border: `1px solid ${currentPage === p ? '#6366F1' : 'var(--border)'}`,
+                  }}>
+                  {p}
+                </button>
+              )
+            )}
             <button onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages}
               className="px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-40"
               style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
-              Próxima
+              →
             </button>
           </div>
         </div>
