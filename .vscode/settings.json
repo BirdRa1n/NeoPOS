@@ -5,8 +5,8 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     // Corrigir automaticamente problemas ao salvar (ESLint)
     "editor.codeActionsOnSave": {
-        "source.fixAll.eslint": true,
-        "source.organizeImports": true
+        "source.fixAll.eslint": "explicit",
+        "source.organizeImports": "explicit"
     },
     // ESLint rodando nos arquivos
     "eslint.validate": [
