@@ -1,11 +1,23 @@
 'use client';
-import { useState } from 'react';
-import {
-  Crown, X, AlertTriangle, Save, Check, Loader2,
-  Truck, Package, UtensilsCrossed, Eye, Plus, Edit, Trash2, ShieldCheck,
-} from 'lucide-react';
+import { ALPHA, COLORS } from '@/lib/constants';
 import { supabase } from '@/supabase/client';
-import { COLORS, ALPHA } from '@/lib/constants';
+import {
+  AlertTriangle,
+  Check,
+  Crown,
+  Edit,
+  Eye,
+  Loader2,
+  Package,
+  Plus,
+  Save,
+  ShieldCheck,
+  Trash2,
+  Truck,
+  UtensilsCrossed,
+  X,
+} from 'lucide-react';
+import { useState } from 'react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type OrderType = 'delivery' | 'pickup' | 'table';
@@ -15,7 +27,7 @@ export interface StaffRole {
   name: string;
   description: string | null;
   color: string;
-  is_driver: boolean;                   // ← entregador
+  is_driver: boolean;
   perm_orders_view: boolean;
   perm_orders_create: boolean;
   perm_orders_edit: boolean;
@@ -49,20 +61,20 @@ const ORDER_OPS: {
   key: 'allowed_view_order_types' | 'allowed_create_order_types' | 'allowed_edit_order_types' | 'allowed_delete_order_types';
   label: string; icon: React.FC<any>; perm: keyof StaffRole;
 }[] = [
-    { key: 'allowed_view_order_types', label: 'Visualizar', icon: Eye, perm: 'perm_orders_view' },
-    { key: 'allowed_create_order_types', label: 'Criar', icon: Plus, perm: 'perm_orders_create' },
-    { key: 'allowed_edit_order_types', label: 'Editar / Status', icon: Edit, perm: 'perm_orders_edit' },
-    { key: 'allowed_delete_order_types', label: 'Excluir', icon: Trash2, perm: 'perm_orders_delete' },
-  ];
+  { key: 'allowed_view_order_types',   label: 'Visualizar',     icon: Eye,   perm: 'perm_orders_view' },
+  { key: 'allowed_create_order_types', label: 'Criar',          icon: Plus,  perm: 'perm_orders_create' },
+  { key: 'allowed_edit_order_types',   label: 'Editar / Status',icon: Edit,  perm: 'perm_orders_edit' },
+  { key: 'allowed_delete_order_types', label: 'Excluir',        icon: Trash2,perm: 'perm_orders_delete' },
+];
 
 const PERM_GROUPS = [
   {
     label: 'Pedidos', color: COLORS.accent, perms: [
-      { key: 'perm_orders_view', label: 'Visualizar' },
-      { key: 'perm_orders_create', label: 'Criar' },
-      { key: 'perm_orders_edit', label: 'Editar' },
+      { key: 'perm_orders_view',          label: 'Visualizar' },
+      { key: 'perm_orders_create',        label: 'Criar' },
+      { key: 'perm_orders_edit',          label: 'Editar' },
       { key: 'perm_orders_change_status', label: 'Mudar status' },
-      { key: 'perm_orders_delete', label: 'Excluir' },
+      { key: 'perm_orders_delete',        label: 'Excluir' },
     ]
   },
   {
@@ -79,15 +91,15 @@ const PERM_GROUPS = [
   },
   {
     label: 'Financeiro & Relatórios', color: COLORS.warning, perms: [
-      { key: 'perm_finance_view', label: 'Financeiro' },
-      { key: 'perm_reports_view', label: 'Relatórios' },
-      { key: 'perm_customers_view', label: 'Clientes' },
+      { key: 'perm_finance_view',    label: 'Financeiro' },
+      { key: 'perm_reports_view',    label: 'Relatórios' },
+      { key: 'perm_customers_view',  label: 'Clientes' },
     ]
   },
   {
     label: 'Administração', color: COLORS.danger, perms: [
       { key: 'perm_store_settings', label: 'Configurações da loja' },
-      { key: 'perm_staff_manage', label: 'Gerenciar equipe' },
+      { key: 'perm_staff_manage',   label: 'Gerenciar equipe' },
     ]
   },
 ];
@@ -133,7 +145,9 @@ function OrderTypeSelector({ label, opKey, value, onChange, disabled, isDark }: 
   onChange: (v: OrderType[] | null) => void; disabled?: boolean; isDark: boolean;
 }) {
   const isUnrestricted = value === null;
+
   const toggleAll = () => onChange(isUnrestricted ? [] : null);
+
   const toggleType = (type: OrderType) => {
     if (value === null) {
       onChange(ORDER_TYPES.map(t => t.value).filter(t => t !== type));
@@ -193,18 +207,41 @@ interface RoleEditorModalProps {
 export function RoleEditorModal({ role, storeId, isDark, onClose, onSaved }: RoleEditorModalProps) {
   const isNew = !role?.id;
 
-  const [form, setForm] = useState<StaffRole>({
-    ...EMPTY_ROLE,
-    ...(role ? {
-      name: role.name ?? '',
+  // ── FIX: inicializa form copiando TODOS os campos do role existente,
+  //    incluindo is_driver — antes só copiava perm_* e allowed_* ──────────────
+  const [form, setForm] = useState<StaffRole>(() => {
+    if (!role) return { ...EMPTY_ROLE };
+
+    return {
+      ...EMPTY_ROLE,
+      // Campos escalares explícitos — garantem que nenhum seja perdido
+      name:        role.name        ?? '',
       description: role.description ?? '',
-      color: role.color ?? COLORS.accent,
-      is_driver: role.is_driver ?? false,
-      ...Object.fromEntries(
-        Object.entries(role).filter(([k]) => k.startsWith('perm_') || k.startsWith('allowed_'))
-      ),
-    } : {}),
+      color:       role.color       ?? COLORS.accent,
+      is_driver:   role.is_driver   ?? false,          // ← corrigido
+      // Permissões (perm_*)
+      perm_orders_view:          role.perm_orders_view          ?? false,
+      perm_orders_create:        role.perm_orders_create        ?? false,
+      perm_orders_edit:          role.perm_orders_edit          ?? false,
+      perm_orders_delete:        role.perm_orders_delete        ?? false,
+      perm_orders_change_status: role.perm_orders_change_status ?? false,
+      perm_inventory_view:       role.perm_inventory_view       ?? false,
+      perm_inventory_edit:       role.perm_inventory_edit       ?? false,
+      perm_catalog_view:         role.perm_catalog_view         ?? false,
+      perm_catalog_edit:         role.perm_catalog_edit         ?? false,
+      perm_finance_view:         role.perm_finance_view         ?? false,
+      perm_customers_view:       role.perm_customers_view       ?? false,
+      perm_reports_view:         role.perm_reports_view         ?? false,
+      perm_store_settings:       role.perm_store_settings       ?? false,
+      perm_staff_manage:         role.perm_staff_manage         ?? false,
+      // Restrições por tipo de pedido (allowed_*)
+      allowed_view_order_types:   role.allowed_view_order_types   ?? null,
+      allowed_create_order_types: role.allowed_create_order_types ?? null,
+      allowed_edit_order_types:   role.allowed_edit_order_types   ?? null,
+      allowed_delete_order_types: role.allowed_delete_order_types ?? null,
+    };
   });
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -212,31 +249,41 @@ export function RoleEditorModal({ role, storeId, isDark, onClose, onSaved }: Rol
 
   const handleSave = async () => {
     if (!form.name.trim()) { setError('Nome do cargo é obrigatório'); return; }
-    setSaving(true); setError('');
+    setSaving(true);
+    setError('');
     try {
       const token = await getToken();
-      const normalizeTypes = (v: OrderType[] | null) => v === null || v.length === 0 ? null : v;
+      const normalizeTypes = (v: OrderType[] | null) => (!v || v.length === 0) ? null : v;
+
       const payload = {
         ...form,
-        name: form.name.trim(),
+        name:        form.name.trim(),
         description: form.description?.trim() || null,
-        is_driver: form.is_driver,
-        allowed_view_order_types: normalizeTypes(form.allowed_view_order_types),
+        is_driver:   form.is_driver,                   // ← explícito no payload
+        allowed_view_order_types:   normalizeTypes(form.allowed_view_order_types),
         allowed_create_order_types: normalizeTypes(form.allowed_create_order_types),
-        allowed_edit_order_types: normalizeTypes(form.allowed_edit_order_types),
+        allowed_edit_order_types:   normalizeTypes(form.allowed_edit_order_types),
         allowed_delete_order_types: normalizeTypes(form.allowed_delete_order_types),
       };
+
       if (isNew) {
         await staffCall(token, { action: 'create_role', store_id: storeId, role: payload });
       } else {
         await staffCall(token, { action: 'update_role', store_id: storeId, role_id: role!.id, role: payload });
       }
-      onSaved(); onClose();
-    } catch (e: any) { setError(e.message); }
-    finally { setSaving(false); }
+
+      onSaved();
+      onClose();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const hasOrderPerms = form.perm_orders_view || form.perm_orders_create || form.perm_orders_edit || form.perm_orders_delete;
+  const hasOrderPerms =
+    form.perm_orders_view || form.perm_orders_create ||
+    form.perm_orders_edit || form.perm_orders_delete;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -312,7 +359,7 @@ export function RoleEditorModal({ role, storeId, isDark, onClose, onSaved }: Rol
 
           <div style={{ height: 1, background: 'var(--border)' }} />
 
-          {/* ── Tipo de cargo (is_driver) ── */}
+          {/* Tipo de Cargo — is_driver */}
           <div className="space-y-3">
             <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
               Tipo de Cargo
@@ -343,7 +390,7 @@ export function RoleEditorModal({ role, storeId, isDark, onClose, onSaved }: Rol
 
           <div style={{ height: 1, background: 'var(--border)' }} />
 
-          {/* ── Permissões gerais ── */}
+          {/* Permissões gerais */}
           <div className="space-y-4">
             <p className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Permissões</p>
             {PERM_GROUPS.map(group => (
@@ -378,7 +425,7 @@ export function RoleEditorModal({ role, storeId, isDark, onClose, onSaved }: Rol
             ))}
           </div>
 
-          {/* ── Restrições por Tipo de Pedido ── */}
+          {/* Restrições por Tipo de Pedido */}
           {hasOrderPerms && (
             <>
               <div style={{ height: 1, background: 'var(--border)' }} />

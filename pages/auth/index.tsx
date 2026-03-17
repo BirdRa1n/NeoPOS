@@ -1,16 +1,23 @@
 "use client";
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
-import { supabase } from '@/supabase/client';
-import { Sun, Moon } from 'lucide-react';
-import { useAuthTheme } from '@/hooks/useAuthTheme';
-import { AUTH_TOKENS, AuthStep, AccountType } from '@/types/auth';
 import {
-  GridBackground, LeftPanel, ProgressHeader,
-  LoginForm, RegisterForm, ForgotPasswordForm,
-  VerifyEmailForm, CreateStoreForm, JoinAsStaffForm,
-  StaffPendingScreen, SuccessScreen, buildAuthCSS,
+  CreateStoreForm,
+  ForgotPasswordForm,
+  GridBackground,
+  JoinAsStaffForm,
+  LeftPanel,
+  LoginForm,
+  ProgressHeader,
+  RegisterForm,
+  StaffPendingScreen, SuccessScreen,
+  VerifyEmailForm,
+  buildAuthCSS,
 } from '@/components/auth';
+import { useAuthTheme } from '@/hooks/useAuthTheme';
+import { supabase } from '@/supabase/client';
+import { AUTH_TOKENS, AccountType, AuthStep } from '@/types/auth';
+import { Moon, Sun } from 'lucide-react';
+import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
 
 export default function AuthPage() {
   const router = useRouter();
@@ -24,15 +31,43 @@ export default function AuthPage() {
   const [accountType, setAccountType] = useState<AccountType>('');
 
   useEffect(() => {
+    // Aguarda o router estar pronto para ler query params
+    if (!router.isReady) return;
+
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) router.push('/dashboard');
+      if (session) {
+        // ── Retomada de onboarding incompleto ──────────────────────────────
+        // Se o usuário voltou da tela de onboarding incompleto com ?resume=
+        const resume = router.query.resume as string | undefined;
+        if (resume === 'owner') {
+          // Usuário já logado, pula direto para criar loja
+          setRegEmail(session.user.email ?? '');
+          setAccountType('owner');
+          setStep('create-store');
+          return;
+        }
+        if (resume === 'staff') {
+          // Usuário já logado, pula direto para entrar na equipe
+          setRegEmail(session.user.email ?? '');
+          setAccountType('staff');
+          setStep('join-staff');
+          return;
+        }
+        // ── Sem resume: redireciona normalmente ────────────────────────────
+        router.push('/dashboard');
+      }
+      // Sem sessão: permanece na tela de auth normalmente
     });
-  }, []);
+  }, [router.isReady, router.query.resume]);
 
   useEffect(() => {
     const bgColor = isDark ? '#080B12' : '#F1F4FA';
     let meta = document.querySelector('meta[name="theme-color"]');
-    if (!meta) { meta = document.createElement('meta'); meta.setAttribute('name', 'theme-color'); document.head.appendChild(meta); }
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.setAttribute('name', 'theme-color');
+      document.head.appendChild(meta);
+    }
     meta.setAttribute('content', bgColor);
   }, [theme]);
 
@@ -42,7 +77,9 @@ export default function AuthPage() {
   const getThemeLabel = () => mode === 'auto' ? 'Auto' : mode === 'light' ? 'Claro' : 'Escuro';
 
   const handleRegisterSuccess = (email: string, type: AccountType) => {
-    setRegEmail(email); setAccountType(type); setStep('verify-email');
+    setRegEmail(email);
+    setAccountType(type);
+    setStep('verify-email');
   };
 
   const handleEmailVerified = () => {
@@ -69,6 +106,10 @@ export default function AuthPage() {
     );
   };
 
+  // Mostra o ProgressHeader apenas quando há um email de cadastro em andamento
+  // OU quando está em passo de retomada de onboarding
+  const showProgress = !!regEmail && step !== 'auth';
+
   return (
     <>
       <style>{buildAuthCSS(tk, isDark)}</style>
@@ -89,7 +130,9 @@ export default function AuthPage() {
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px', background: tk.rightBg, transition: 'background .3s' }}>
             <div style={{ marginBottom: 24, display: 'none' }} className="mobile-logo" />
 
-            {regEmail && <ProgressHeader step={step} accountType={accountType} tk={tk} />}
+            {showProgress && (
+              <ProgressHeader step={step} accountType={accountType} tk={tk} />
+            )}
 
             <div className="glass-card" style={{ width: '100%', maxWidth: 420, padding: '32px' }}>
               {renderContent()}

@@ -3,6 +3,7 @@ import { DriverDashboard } from '@/components/dashboard/DriverDashboard';
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { SectionCard } from '@/components/dashboard/SectionCard';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
+import { IncompleteOnboarding } from '@/components/IncompleteOnboarding';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { StaffBlockedScreen } from '@/components/StaffBlockedScreen';
 import { CustomersView } from '@/components/views/CustomersView';
@@ -34,8 +35,6 @@ import { useEffect, useState } from 'react';
 // ─── Types ────────────────────────────────────────────────────────────────────
 type TabId = 'dashboard' | 'products' | 'orders' | 'customers' | 'delivery' | 'inventory' | 'finance' | 'settings';
 
-// ─── Nav items com controle de permissão ──────────────────────────────────────
-// perm: null = sempre visível | string = permissão necessária no cargo
 const NAV: { id: TabId; label: string; icon: React.FC<any>; perm: string | null }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, perm: null },
   { id: 'orders', label: 'Pedidos', icon: ShoppingCart, perm: 'perm_orders_view' },
@@ -61,14 +60,10 @@ function Sidebar({ activeTab, onTabChange, pendingCount, collapsed, storeName, u
 }) {
   const { can, userRole, staffInfo } = useStaff();
 
-  // Filtra nav items com base nas permissões
   const visibleNav = NAV.filter(({ perm }) => {
     if (perm === null) return true;
-    // owner: vê tudo
     if (userRole === 'owner') return true;
-    // staff sem cargo: só vê dashboard
     if (!staffInfo?.role) return false;
-    // perm_store_settings: só owner vê aba de configurações completa
     if (perm === 'perm_store_settings') return can('perm_store_settings' as any);
     return can(perm as any);
   });
@@ -78,8 +73,8 @@ function Sidebar({ activeTab, onTabChange, pendingCount, collapsed, storeName, u
   return (
     <aside
       className={`fixed left-0 top-0 h-screen z-50 flex flex-col transition-all duration-300 ease-[cubic-bezier(.4,0,.2,1)] shrink-0 ${isMobile
-          ? (collapsed ? '-translate-x-full w-64' : 'translate-x-0 w-64')
-          : 'translate-x-0'
+        ? (collapsed ? '-translate-x-full w-64' : 'translate-x-0 w-64')
+        : 'translate-x-0'
         }`}
       style={{
         width: isMobile ? 240 : (collapsed ? 72 : 240),
@@ -87,7 +82,6 @@ function Sidebar({ activeTab, onTabChange, pendingCount, collapsed, storeName, u
         borderRight: '1px solid var(--sidebar-border)',
       }}
     >
-      {/* Logo */}
       <div className="h-16 flex items-center px-4 shrink-0" style={{ borderBottom: '1px solid var(--sidebar-border)' }}>
         {(collapsed && !isMobile) ? (
           <div className="mx-auto w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: COLORS.accentGradient }}>
@@ -103,7 +97,6 @@ function Sidebar({ activeTab, onTabChange, pendingCount, collapsed, storeName, u
         )}
       </div>
 
-      {/* Store pill */}
       {(!collapsed || isMobile) && (
         <div className="mx-3 mt-3 px-3 py-2 rounded-xl shrink-0"
           style={{ background: 'var(--sidebar-store-bg)', border: '1px solid var(--sidebar-store-border)' }}>
@@ -120,7 +113,6 @@ function Sidebar({ activeTab, onTabChange, pendingCount, collapsed, storeName, u
         </div>
       )}
 
-      {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
         {visibleNav.map(({ id, label, icon: Icon }) => {
           const active = activeTab === id;
@@ -155,7 +147,6 @@ function Sidebar({ activeTab, onTabChange, pendingCount, collapsed, storeName, u
         })}
       </nav>
 
-      {/* User */}
       <div className="shrink-0 p-3" style={{ borderTop: '1px solid var(--sidebar-border)' }}>
         {(collapsed && !isMobile) ? (
           <button
@@ -270,7 +261,6 @@ function Topbar({ onToggle, title, subtitle }: { onToggle: () => void; title: st
   );
 }
 
-// ─── Tela de acesso negado (staff sem permissão para a aba) ───────────────────
 function AccessDenied({ tabLabel }: { tabLabel: string }) {
   return (
     <div className="flex flex-col items-center justify-center h-64 gap-4 text-center">
@@ -292,7 +282,7 @@ function AccessDenied({ tabLabel }: { tabLabel: string }) {
   );
 }
 
-// ─── Dashboard Home view ──────────────────────────────────────────────────────
+// ─── Dashboard Home ───────────────────────────────────────────────────────────
 function DashboardHome() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
@@ -320,8 +310,6 @@ function DashboardHome() {
   const total = todayOrders.length || 1;
 
   const dateStr = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
-
-  // Saudação personalizada por cargo
   const displayName = staffInfo?.display_name ?? '';
 
   if (loading) return (
@@ -332,8 +320,6 @@ function DashboardHome() {
 
   return (
     <div className="space-y-5">
-
-      {/* Greeting */}
       <div className="flex items-center justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: COLORS.accent }}>{dateStr}</p>
@@ -360,7 +346,6 @@ function DashboardHome() {
         </div>
       </div>
 
-      {/* Métricas — exibe de acordo com permissões */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         {can('perm_orders_view' as any) && (
           <MetricCard label="Pedidos Hoje" value={todayOrders.length} icon={ShoppingCart} accent={COLORS.accent} sub={`${pending.length} pend.`} trend="up" />
@@ -376,10 +361,8 @@ function DashboardHome() {
         )}
       </div>
 
-      {/* Middle row */}
       {can('perm_orders_view' as any) && (
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-          {/* Pending orders */}
           <div className="xl:col-span-2">
             <SectionCard
               title="Pedidos Pendentes"
@@ -430,17 +413,15 @@ function DashboardHome() {
             </SectionCard>
           </div>
 
-          {/* Right col */}
           <div className="space-y-4">
-            {/* Order types */}
             <div className="rounded-2xl p-5"
               style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--surface-box)' }}>
               <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Tipo de Pedido</p>
               <div className="space-y-3.5">
                 {[
-                  { label: 'Delivery', count: delivery, color: COLORS.accent,   icon: Truck },
-                  { label: 'Retirada', count: pickup,   color: COLORS.warning,  icon: Package },
-                  { label: 'Mesa',     count: table,    color: COLORS.success,  icon: Users },
+                  { label: 'Delivery', count: delivery, color: COLORS.accent, icon: Truck },
+                  { label: 'Retirada', count: pickup, color: COLORS.warning, icon: Package },
+                  { label: 'Mesa', count: table, color: COLORS.success, icon: Users },
                 ].map(({ label, count, color, icon: Icon }) => (
                   <div key={label} className="flex items-center gap-3">
                     <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${color}12` }}>
@@ -461,17 +442,16 @@ function DashboardHome() {
               </div>
             </div>
 
-            {/* Finance summary — só para quem tem perm */}
             {can('perm_finance_view' as any) && (
               <div className="rounded-2xl p-5"
                 style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--surface-box)' }}>
                 <p className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: 'var(--text-muted)' }}>Resumo Financeiro</p>
                 <div className="space-y-3">
                   {[
-                    { label: 'Receita Bruta',  value: summary?.gross_revenue ?? 0,       color: COLORS.accent },
-                    { label: 'Descontos',       value: summary?.total_discounts ?? 0,     color: COLORS.danger },
-                    { label: 'Taxa Entrega',    value: summary?.total_delivery_fees ?? 0, color: COLORS.warning },
-                    { label: 'Receita Líquida', value: summary?.net_revenue ?? 0,         color: COLORS.success },
+                    { label: 'Receita Bruta', value: summary?.gross_revenue ?? 0, color: COLORS.accent },
+                    { label: 'Descontos', value: summary?.total_discounts ?? 0, color: COLORS.danger },
+                    { label: 'Taxa Entrega', value: summary?.total_delivery_fees ?? 0, color: COLORS.warning },
+                    { label: 'Receita Líquida', value: summary?.net_revenue ?? 0, color: COLORS.success },
                   ].map(({ label, value, color }) => (
                     <div key={label} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -488,7 +468,6 @@ function DashboardHome() {
         </div>
       )}
 
-      {/* Bottom row */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         {can('perm_orders_view' as any) && (
           <SectionCard title="Últimos Pedidos" icon={Activity} iconColor={COLORS.accent}>
@@ -584,7 +563,7 @@ const PAGE_META: Record<TabId, { title: string; subtitle: string }> = {
 // ─── Root ─────────────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const { user, loading: authLoading, signOut } = useAuth();
-  const { store, loading: storeLoading } = useStore();
+  const { store, loading: storeLoading, resolved: storeResolved, resolvedStoreId } = useStore();
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
@@ -606,16 +585,16 @@ export default function DashboardPage() {
     if (!authLoading && !user) router.push('/auth');
   }, [user, authLoading, router]);
 
-  if (authLoading || storeLoading) return <LoadingSpinner />;
+  if (authLoading || !storeResolved) return <LoadingSpinner />;
   if (!user) return null;
 
   return (
     <ThemeProvider>
-      {/* StaffProvider precisa do storeId para buscar o vínculo */}
-      <StaffProvider storeId={store?.id ?? null}>
+      <StaffProvider storeId={resolvedStoreId}>
         <DashboardContent
           user={user}
           store={store}
+          storeResolved={storeResolved}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           collapsed={collapsed}
@@ -629,9 +608,10 @@ export default function DashboardPage() {
 }
 
 // ─── DashboardContent ─────────────────────────────────────────────────────────
-function DashboardContent({ user, store, activeTab, setActiveTab, collapsed, setCollapsed, isMobile, signOut }: {
+function DashboardContent({ user, store, storeResolved, activeTab, setActiveTab, collapsed, setCollapsed, isMobile, signOut }: {
   user: any;
   store: any;
+  storeResolved: boolean;
   activeTab: TabId;
   setActiveTab: (tab: TabId) => void;
   collapsed: boolean;
@@ -643,10 +623,11 @@ function DashboardContent({ user, store, activeTab, setActiveTab, collapsed, set
   const { userRole, staffInfo, loading: staffLoading, can, isDriver } = useStaff();
   const { orders: pending } = useOrders('pending');
   const vars = THEMES[theme];
+  const router = useRouter();
   const { title, subtitle } = PAGE_META[activeTab];
 
   useEffect(() => {
-    const bgColor = theme === 'dark' ? '#080B12' : '#F1F4FA'; // matches THEMES dark/light --bg
+    const bgColor = theme === 'dark' ? '#080B12' : '#F1F4FA';
     let meta = document.querySelector('meta[name="theme-color"]');
     if (!meta) {
       meta = document.createElement('meta');
@@ -656,15 +637,30 @@ function DashboardContent({ user, store, activeTab, setActiveTab, collapsed, set
     meta.setAttribute('content', bgColor);
   }, [theme]);
 
-  // Ainda carregando o role
-  if (staffLoading) return <LoadingSpinner />;
+  // Aguarda AMBOS os loadings terminarem antes de decidir o que renderizar.
+  // Sem isso, StaffContext resolve userRole=null antes de StoreContext terminar,
+  // causando o piscar do IncompleteOnboarding em membros válidos.
+  if (!storeResolved || staffLoading) return <LoadingSpinner />;
 
-  // Staff com status bloqueante (pending, suspended, rejected)
-  if (
-    userRole === 'staff' &&
-    staffInfo &&
-    staffInfo.status !== 'active'
-  ) {
+  // Só mostra IncompleteOnboarding quando temos certeza que não há store nem role
+  if (!store && userRole === null) {
+    const cssVars = Object.entries(vars).map(([k, v]) => `${k}:${v}`).join(';');
+    return (
+      <>
+        <style>{`.neopos { ${cssVars}; font-family:'DM Sans',system-ui,sans-serif; }`}</style>
+        <div className="neopos">
+          <IncompleteOnboarding
+            onResumeOwner={() => router.push('/auth?resume=owner')}
+            onResumeStaff={() => router.push('/auth?resume=staff')}
+          />
+        </div>
+      </>
+    );
+  }
+  // ── FIM: Detecta onboarding incompleto ───────────────────────────────────────
+
+  // Staff com status bloqueante
+  if (userRole === 'staff' && staffInfo && staffInfo.status !== 'active') {
     const cssVars = Object.entries(vars).map(([k, v]) => `${k}:${v}`).join(';');
     return (
       <>
@@ -676,24 +672,7 @@ function DashboardContent({ user, store, activeTab, setActiveTab, collapsed, set
     );
   }
 
-  // Usuário sem vínculo com a loja e sem store própria
-  if (!store && userRole === null) {
-    return (
-      <div className="flex items-center justify-center min-h-screen" style={{ background: '#080B12' }}>
-        <div className="text-center p-8 max-w-sm">
-          <p className="text-white font-bold mb-2">Nenhuma loja encontrada</p>
-          <p className="text-gray-400 text-sm mb-6">Sua conta não está associada a nenhuma loja ativa.</p>
-          <button onClick={signOut} className="px-4 py-2 rounded-xl text-sm font-semibold text-white"
-            style={{ background: ALPHA.accentBgSubtleD, border: `1px solid ${ALPHA.accentBorderMd}` }}>
-            Sair
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   const renderView = () => {
-    // Verifica permissão antes de renderizar a view
     const navItem = NAV.find(n => n.id === activeTab);
     const perm = navItem?.perm;
 
@@ -701,7 +680,6 @@ function DashboardContent({ user, store, activeTab, setActiveTab, collapsed, set
       return <AccessDenied tabLabel={PAGE_META[activeTab].title} />;
     }
 
-    // Entregador: dashboard customizada
     if (isDriver && staffInfo?.id && activeTab === 'dashboard') {
       return <DriverDashboard staffMemberId={staffInfo.id} />;
     }

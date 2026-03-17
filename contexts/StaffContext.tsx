@@ -1,6 +1,6 @@
 'use client';
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/supabase/client';
+import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
 
 export type OrderType = 'delivery' | 'pickup' | 'table';
@@ -10,7 +10,7 @@ export interface StaffRole {
   name: string;
   color: string;
   description: string | null;
-  is_driver: boolean;                   // ← novo: cargo de entregador
+  is_driver: boolean;
   perm_orders_view: boolean;
   perm_orders_create: boolean;
   perm_orders_edit: boolean;
@@ -25,9 +25,7 @@ export interface StaffRole {
   perm_reports_view: boolean;
   perm_store_settings: boolean;
   perm_staff_manage: boolean;
-  // legado
   allowed_order_types: OrderType[] | null;
-  // granular por operação
   allowed_view_order_types: OrderType[] | null;
   allowed_create_order_types: OrderType[] | null;
   allowed_edit_order_types: OrderType[] | null;
@@ -50,17 +48,15 @@ interface StaffContextType {
   staffInfo: StaffMemberInfo | null;
   perms: StaffRole | null;
   loading: boolean;
-  /** true se o cargo do membro tem is_driver = true */
   isDriver: boolean;
   can: (perm: keyof StaffRole) => boolean;
-  /** null = sem restrição (todos); array vazio = nenhum permitido */
   allowedOrderTypes: (op: 'view' | 'create' | 'edit' | 'delete') => OrderType[] | null;
   canOrderType: (op: 'view' | 'create' | 'edit' | 'delete', type: OrderType) => boolean;
   refetch: () => Promise<void>;
 }
 
 const StaffContext = createContext<StaffContextType>({
-  userRole: null, staffInfo: null, perms: null, loading: true,
+  userRole: null, staffInfo: null, perms: null, loading: false,
   isDriver: false,
   can: () => false, allowedOrderTypes: () => null, canOrderType: () => false, refetch: async () => { },
 });
@@ -72,36 +68,81 @@ export function StaffProvider({ children, storeId }: { children: ReactNode; stor
   const [loading, setLoading] = useState(true);
 
   const fetchRole = async () => {
-    if (!user || !storeId) return;
+    // Se não tem storeId ou user, não há nada para buscar — encerra loading imediatamente
+    if (!user || !storeId) {
+      setUserRole(null);
+      setStaffInfo(null);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
-      const { data: store } = await supabase.schema('core').from('stores').select('id')
-        .eq('id', storeId).eq('user_id', user.id).maybeSingle();
-      if (store) { setUserRole('owner'); setStaffInfo(null); return; }
+      // Verifica se é dono da loja
+      const { data: store } = await supabase
+        .schema('core')
+        .from('stores')
+        .select('id')
+        .eq('id', storeId)
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-      const { data: member } = await supabase.schema('core').from('staff_members')
-        .select(`id,store_id,user_id,status,display_name,role:role_id(
-          id,name,color,description,is_driver,
-          perm_orders_view,perm_orders_create,perm_orders_edit,perm_orders_delete,perm_orders_change_status,
-          perm_inventory_view,perm_inventory_edit,perm_catalog_view,perm_catalog_edit,
-          perm_finance_view,perm_customers_view,perm_reports_view,perm_store_settings,perm_staff_manage,
-          allowed_order_types,allowed_view_order_types,allowed_create_order_types,
-          allowed_edit_order_types,allowed_delete_order_types
-        )`)
-        .eq('store_id', storeId).eq('user_id', user.id).maybeSingle();
+      if (store) {
+        setUserRole('owner');
+        setStaffInfo(null);
+        return;
+      }
+
+      // Verifica se é membro da equipe
+      const { data: member } = await supabase
+        .schema('core')
+        .from('staff_members')
+        .select(`
+          id, store_id, user_id, status, display_name,
+          role:role_id(
+            id, name, color, description, is_driver,
+            perm_orders_view, perm_orders_create, perm_orders_edit,
+            perm_orders_delete, perm_orders_change_status,
+            perm_inventory_view, perm_inventory_edit,
+            perm_catalog_view, perm_catalog_edit,
+            perm_finance_view, perm_customers_view, perm_reports_view,
+            perm_store_settings, perm_staff_manage,
+            allowed_order_types, allowed_view_order_types,
+            allowed_create_order_types, allowed_edit_order_types,
+            allowed_delete_order_types
+          )
+        `)
+        .eq('store_id', storeId)
+        .eq('user_id', user.id)
+        .maybeSingle();
 
       if (member) {
         setUserRole('staff');
         setStaffInfo({
-          id: member.id, store_id: member.store_id, user_id: member.user_id,
-          status: member.status, display_name: member.display_name,
+          id: member.id,
+          store_id: member.store_id,
+          user_id: member.user_id,
+          status: member.status,
+          display_name: member.display_name,
           role: (member.role as unknown as StaffRole) ?? null,
         });
-      } else { setUserRole(null); setStaffInfo(null); }
-    } finally { setLoading(false); }
+      } else {
+        // Membro não encontrado (foi deletado do banco)
+        setUserRole(null);
+        setStaffInfo(null);
+      }
+    } catch (err) {
+      console.error('StaffContext fetchRole error:', err);
+      setUserRole(null);
+      setStaffInfo(null);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { fetchRole(); }, [user, storeId]);
+  useEffect(() => {
+    fetchRole();
+  }, [user, storeId]);
 
   const can = (perm: keyof StaffRole): boolean => {
     if (userRole === 'owner') return true;
@@ -128,7 +169,6 @@ export function StaffProvider({ children, storeId }: { children: ReactNode; stor
     return allowed.includes(type);
   };
 
-  // isDriver: cargo marcado como entregador
   const isDriver = userRole === 'staff' && (staffInfo?.role?.is_driver === true);
 
   return (
