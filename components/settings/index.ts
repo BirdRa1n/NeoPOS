@@ -1,0 +1,10 @@
+export { TeamTab } from './TeamTab';
+export { SectionHeader } from './SectionHeader';
+export { Toggle } from './Toggle';
+export { ImageUpload } from './ImageUpload';
+export { CatalogPreview } from './CatalogPreview';
+export { SettingsTabs } from './SettingsTabs';
+export { InfoTab } from './InfoTab';
+export { AppearanceTab } from './AppearanceTab';
+export { CatalogTab } from './CatalogTab';
+export { WhatsappTab } from './WhatsappTab';
