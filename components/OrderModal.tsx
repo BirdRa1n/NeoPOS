@@ -9,6 +9,7 @@
  * - Para delivery / pickup: comportamento idêntico ao original.
  */
 import { useState, useEffect } from 'react';
+import { useIsDark } from '@/hooks/useIsDark';
 import {
     X, ArrowUpRight, ShoppingCart, Loader2,
     User, Phone, MapPin, Banknote, CreditCard,
@@ -44,11 +45,6 @@ const PAYMENT_OPTS = [
     { value: 'meal_voucher', label: 'Vale', Icon: CheckSquare },
     { value: 'other', label: 'Outro', Icon: DollarSign },
 ] as const;
-
-function useIsDark() {
-    if (typeof window === 'undefined') return true;
-    return (getComputedStyle(document.documentElement).getPropertyValue('--bg') || '').trim().startsWith('#08');
-}
 
 interface OrderModalProps {
     storeId: string;

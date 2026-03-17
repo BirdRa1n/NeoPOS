@@ -15,11 +15,7 @@ import {
   LayoutGrid, List, ImageOff, CheckCircle2, XCircle,
   AlertTriangle, Loader2
 } from 'lucide-react';
-
-function useIsDark(): boolean {
-  if (typeof window === 'undefined') return true;
-  return (getComputedStyle(document.documentElement).getPropertyValue('--bg') || '').trim().startsWith('#08');
-}
+import { useIsDark } from '@/hooks/useIsDark';
 
 type ViewMode = 'grid' | 'list';
 
@@ -45,7 +41,7 @@ export function ProductsView() {
   const handleEdit = (product: any) => { setSelectedProduct(product); modalState.open(); };
   const handleNew = () => { setSelectedProduct(null); modalState.open(); };
   const handleDeleteClick = (product: any) => { setSelectedProduct(product); setDeleteModal(true); };
-  
+
   const handleDelete = async () => {
     if (!selectedProduct) return;
     setDeleting(true);
@@ -55,11 +51,11 @@ export function ProductsView() {
         const paths = selectedProduct.product_images.map((img: any) => img.storage_path);
         await supabase.storage.from('product-images').remove(paths);
       }
-      
+
       // Delete product (cascade will delete images records)
       const { error } = await supabase.schema('catalog').from('products').delete().eq('id', selectedProduct.id);
       if (error) throw error;
-      
+
       await refetch?.();
       setDeleteModal(false);
       setSelectedProduct(null);
@@ -122,79 +118,79 @@ export function ProductsView() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map(product => {
             const primaryImage = (product as any).product_images?.find((img: any) => img.is_primary) || (product as any).product_images?.[0];
-            
+
             return (
-            <div key={product.id}
-              className="rounded-2xl overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl group"
-              style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--surface-box)' }}>
+              <div key={product.id}
+                className="rounded-2xl overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl group"
+                style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--surface-box)' }}>
 
-              {/* Image */}
-              <div className="aspect-square relative overflow-hidden"
-                style={{ background: isDark ? 'rgba(99,102,241,0.05)' : 'rgba(99,102,241,0.04)' }}>
-                {primaryImage?.url ? (
-                  <img src={primaryImage.url} alt={product.name}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center gap-2">
-                    <ImageOff size={28} style={{ color: 'var(--text-muted)', opacity: 0.3 }} />
-                    <p className="text-xs" style={{ color: 'var(--text-muted)', opacity: 0.4 }}>Sem imagem</p>
-                  </div>
-                )}
-
-                {/* Badges */}
-                <div className="absolute top-2 left-2 flex flex-col gap-1">
-                  {!product.available && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                      style={{ background: 'rgba(239,68,68,0.85)', color: '#fff' }}>Inativo</span>
+                {/* Image */}
+                <div className="aspect-square relative overflow-hidden"
+                  style={{ background: isDark ? 'rgba(99,102,241,0.05)' : 'rgba(99,102,241,0.04)' }}>
+                  {primaryImage?.url ? (
+                    <img src={primaryImage.url} alt={product.name}
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-2">
+                      <ImageOff size={28} style={{ color: 'var(--text-muted)', opacity: 0.3 }} />
+                      <p className="text-xs" style={{ color: 'var(--text-muted)', opacity: 0.4 }}>Sem imagem</p>
+                    </div>
                   )}
-                  {product.promotional_price && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1"
-                      style={{ background: 'rgba(245,158,11,0.9)', color: '#fff' }}>
-                      <Tag size={9} /> Promoção
-                    </span>
-                  )}
-                </div>
-              </div>
 
-              {/* Info */}
-              <div className="p-4">
-                <h3 className="font-bold text-sm mb-1 truncate" style={{ color: 'var(--text-primary)' }}>{product.name}</h3>
-                <p className="text-xs mb-3 line-clamp-2" style={{ color: 'var(--text-muted)' }}>
-                  {product.description || 'Sem descrição'}
-                </p>
-
-                <div className="flex items-end justify-between mb-3">
-                  <div>
-                    {product.promotional_price ? (
-                      <>
-                        <p className="text-[11px] line-through" style={{ color: 'var(--text-muted)' }}>{formatCurrency(product.price)}</p>
-                        <p className="text-base font-bold" style={{ color: '#10B981' }}>{formatCurrency(product.promotional_price)}</p>
-                      </>
-                    ) : (
-                      <p className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>{formatCurrency(product.price)}</p>
+                  {/* Badges */}
+                  <div className="absolute top-2 left-2 flex flex-col gap-1">
+                    {!product.available && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                        style={{ background: 'rgba(239,68,68,0.85)', color: '#fff' }}>Inativo</span>
+                    )}
+                    {product.promotional_price && (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1"
+                        style={{ background: 'rgba(245,158,11,0.9)', color: '#fff' }}>
+                        <Tag size={9} /> Promoção
+                      </span>
                     )}
                   </div>
-                  <span className="w-2 h-2 rounded-full" style={{ background: product.available ? '#10B981' : '#6B7280' }} />
                 </div>
 
-                <div className="flex gap-2">
-                  <button onClick={() => handleEdit(product)}
-                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all"
-                    style={{ background: isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.08)', color: '#818CF8' }}
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.15)'}
-                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.08)'}>
-                    <Edit size={13} /> Editar
-                  </button>
-                  <button onClick={() => handleDeleteClick(product)}
-                    className="w-9 h-9 flex items-center justify-center rounded-xl text-xs font-semibold transition-all"
-                    style={{ background: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.08)', color: '#F87171' }}
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.15)'}
-                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.08)'}>
-                    <Trash2 size={14} />
-                  </button>
+                {/* Info */}
+                <div className="p-4">
+                  <h3 className="font-bold text-sm mb-1 truncate" style={{ color: 'var(--text-primary)' }}>{product.name}</h3>
+                  <p className="text-xs mb-3 line-clamp-2" style={{ color: 'var(--text-muted)' }}>
+                    {product.description || 'Sem descrição'}
+                  </p>
+
+                  <div className="flex items-end justify-between mb-3">
+                    <div>
+                      {product.promotional_price ? (
+                        <>
+                          <p className="text-[11px] line-through" style={{ color: 'var(--text-muted)' }}>{formatCurrency(product.price)}</p>
+                          <p className="text-base font-bold" style={{ color: '#10B981' }}>{formatCurrency(product.promotional_price)}</p>
+                        </>
+                      ) : (
+                        <p className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>{formatCurrency(product.price)}</p>
+                      )}
+                    </div>
+                    <span className="w-2 h-2 rounded-full" style={{ background: product.available ? '#10B981' : '#6B7280' }} />
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button onClick={() => handleEdit(product)}
+                      className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all"
+                      style={{ background: isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.08)', color: '#818CF8' }}
+                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.15)'}
+                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.08)'}>
+                      <Edit size={13} /> Editar
+                    </button>
+                    <button onClick={() => handleDeleteClick(product)}
+                      className="w-9 h-9 flex items-center justify-center rounded-xl text-xs font-semibold transition-all"
+                      style={{ background: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.08)', color: '#F87171' }}
+                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.15)'}
+                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.08)'}>
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
             );
           })}
         </div>
@@ -217,61 +213,61 @@ export function ProductsView() {
               <tbody>
                 {filtered.map(product => {
                   const primaryImage = (product as any).product_images?.find((img: any) => img.is_primary) || (product as any).product_images?.[0];
-                  
+
                   return (
-                  <tr key={product.id} className="transition-colors"
-                    style={{ borderBottom: '1px solid var(--border-soft)' }}
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--surface-hover)'}
-                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 flex items-center justify-center"
-                          style={{ background: isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.05)' }}>
-                          {primaryImage?.url
-                            ? <img src={primaryImage.url} alt={product.name} className="w-full h-full object-cover" />
-                            : <Package size={16} style={{ color: '#818CF8', opacity: 0.5 }} />}
+                    <tr key={product.id} className="transition-colors"
+                      style={{ borderBottom: '1px solid var(--border-soft)' }}
+                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--surface-hover)'}
+                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 flex items-center justify-center"
+                            style={{ background: isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.05)' }}>
+                            {primaryImage?.url
+                              ? <img src={primaryImage.url} alt={product.name} className="w-full h-full object-cover" />
+                              : <Package size={16} style={{ color: '#818CF8', opacity: 0.5 }} />}
+                          </div>
+                          <div>
+                            <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>{product.name}</p>
+                            <p className="text-xs line-clamp-1" style={{ color: 'var(--text-muted)' }}>{product.description || '—'}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>{product.name}</p>
-                          <p className="text-xs line-clamp-1" style={{ color: 'var(--text-muted)' }}>{product.description || '—'}</p>
+                      </td>
+                      <td className="px-5 py-4 font-bold" style={{ color: 'var(--text-primary)' }}>{formatCurrency(product.price)}</td>
+                      <td className="px-5 py-4">
+                        {product.promotional_price
+                          ? <span className="font-bold" style={{ color: '#10B981' }}>{formatCurrency(product.promotional_price)}</span>
+                          : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
+                          style={{
+                            background: product.available ? (isDark ? 'rgba(16,185,129,0.15)' : 'rgba(16,185,129,0.1)') : (isDark ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.1)'),
+                            color: product.available ? (isDark ? '#6EE7B7' : '#065F46') : (isDark ? '#FCA5A5' : '#991B1B'),
+                          }}>
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ background: product.available ? '#10B981' : '#EF4444' }} />
+                          {product.available ? 'Ativo' : 'Inativo'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => handleEdit(product)}
+                            className="w-8 h-8 flex items-center justify-center rounded-xl transition-all"
+                            style={{ color: 'var(--text-muted)' }}
+                            onMouseEnter={e => Object.assign((e.currentTarget as HTMLElement).style, { background: 'rgba(99,102,241,0.12)', color: '#818CF8' })}
+                            onMouseLeave={e => Object.assign((e.currentTarget as HTMLElement).style, { background: 'transparent', color: 'var(--text-muted)' })}>
+                            <Edit size={14} />
+                          </button>
+                          <button onClick={() => handleDeleteClick(product)}
+                            className="w-8 h-8 flex items-center justify-center rounded-xl transition-all"
+                            style={{ color: 'var(--text-muted)' }}
+                            onMouseEnter={e => Object.assign((e.currentTarget as HTMLElement).style, { background: 'rgba(239,68,68,0.12)', color: '#F87171' })}
+                            onMouseLeave={e => Object.assign((e.currentTarget as HTMLElement).style, { background: 'transparent', color: 'var(--text-muted)' })}>
+                            <Trash2 size={14} />
+                          </button>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-5 py-4 font-bold" style={{ color: 'var(--text-primary)' }}>{formatCurrency(product.price)}</td>
-                    <td className="px-5 py-4">
-                      {product.promotional_price
-                        ? <span className="font-bold" style={{ color: '#10B981' }}>{formatCurrency(product.promotional_price)}</span>
-                        : <span style={{ color: 'var(--text-muted)' }}>—</span>}
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
-                        style={{
-                          background: product.available ? (isDark ? 'rgba(16,185,129,0.15)' : 'rgba(16,185,129,0.1)') : (isDark ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.1)'),
-                          color: product.available ? (isDark ? '#6EE7B7' : '#065F46') : (isDark ? '#FCA5A5' : '#991B1B'),
-                        }}>
-                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: product.available ? '#10B981' : '#EF4444' }} />
-                        {product.available ? 'Ativo' : 'Inativo'}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => handleEdit(product)}
-                          className="w-8 h-8 flex items-center justify-center rounded-xl transition-all"
-                          style={{ color: 'var(--text-muted)' }}
-                          onMouseEnter={e => Object.assign((e.currentTarget as HTMLElement).style, { background: 'rgba(99,102,241,0.12)', color: '#818CF8' })}
-                          onMouseLeave={e => Object.assign((e.currentTarget as HTMLElement).style, { background: 'transparent', color: 'var(--text-muted)' })}>
-                          <Edit size={14} />
-                        </button>
-                        <button onClick={() => handleDeleteClick(product)}
-                          className="w-8 h-8 flex items-center justify-center rounded-xl transition-all"
-                          style={{ color: 'var(--text-muted)' }}
-                          onMouseEnter={e => Object.assign((e.currentTarget as HTMLElement).style, { background: 'rgba(239,68,68,0.12)', color: '#F87171' })}
-                          onMouseLeave={e => Object.assign((e.currentTarget as HTMLElement).style, { background: 'transparent', color: 'var(--text-muted)' })}>
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                      </td>
+                    </tr>
                   );
                 })}
               </tbody>

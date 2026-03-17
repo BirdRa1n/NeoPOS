@@ -21,7 +21,9 @@ import { Card } from '@/components/ui/Card';
 import { ModalBackdrop, ModalShell, ModalHeader } from '@/components/ui/Modal';
 import { OrderModal } from '@/components/OrderModal';
 import { TableOrderModal } from '@/components/TableOrderModal';
+import { DispatchModal } from '@/components/orders/DispatchModal';
 import { COLORS, ALPHA } from '@/lib/constants';
+import { useIsDark } from '@/hooks/useIsDark';
 
 // ─── Order type config ────────────────────────────────────────────────────────
 
@@ -75,13 +77,6 @@ const PAYMENT_ICONS: Record<string, React.FC<any>> = {
   other: DollarSign,
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function useIsDark(): boolean {
-  if (typeof window === 'undefined') return true;
-  return (getComputedStyle(document.documentElement).getPropertyValue('--bg') || '').trim().startsWith('#08');
-}
-
 function StatusBadge({ status }: { status: string }) {
   const isDark = useIsDark();
   const cfg = STATUS_CFG[status] ?? { label: status, dot: '#9CA3AF', bgD: 'rgba(156,163,175,0.15)', bgL: 'rgba(156,163,175,0.1)', txD: '#D1D5DB', txL: '#374151' };
@@ -93,95 +88,6 @@ function StatusBadge({ status }: { status: string }) {
       <span className="w-1.5 h-1.5 rounded-full" style={{ background: cfg.dot }} />
       {cfg.label}
     </span>
-  );
-}
-
-// ─── Dispatch Modal ───────────────────────────────────────────────────────────
-
-function DispatchModal({ orderId, drivers, onClose, onDispatched }: {
-  orderId: string;
-  drivers: any[];
-  onClose: () => void;
-  onDispatched: () => void;
-}) {
-  const isDark = useIsDark();
-  const [driverId, setDriverId] = useState('');
-  const [saving, setSaving] = useState(false);
-
-  const activeDrivers = drivers.filter(d => d.active);
-
-  const selStyle: React.CSSProperties = {
-    padding: '0.6rem 0.875rem 0.6rem 2.25rem',
-    background: 'var(--input-bg)',
-    border: '1px solid var(--input-border)',
-    color: 'var(--text-primary)',
-    borderRadius: 12,
-    fontSize: 13,
-    width: '100%',
-    outline: 'none',
-  };
-
-  const handleDispatch = async () => {
-    setSaving(true);
-    try {
-      const payload: any = { status: 'out_for_delivery' };
-      if (driverId) payload.driver_id = driverId;
-      const { error } = await supabase.schema('orders').from('orders').update(payload).eq('id', orderId);
-      if (error) throw error;
-      onDispatched();
-      onClose();
-    } catch (err: any) { alert(err.message); }
-    finally { setSaving(false); }
-  };
-
-  return (
-    <ModalBackdrop onClose={onClose}>
-      <ModalShell maxW="max-w-sm">
-        <ModalHeader title="Despachar para Entrega" subtitle="Selecione o entregador (opcional)" icon={Send} iconColor={COLORS.accent} onClose={onClose} />
-        <div className="p-6 space-y-5">
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-              Entregador
-            </label>
-            <div style={{ position: 'relative' }}>
-              <User size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-              <select value={driverId} onChange={e => setDriverId(e.target.value)} style={selStyle}>
-                <option value="">Sem entregador específico</option>
-                {activeDrivers.map(d => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}{d.vehicle ? ` · ${d.vehicle}` : ''}{d.plate ? ` (${d.plate})` : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-              Você pode despachar sem atribuir um entregador e editar depois.
-            </p>
-          </div>
-
-          {activeDrivers.length === 0 && (
-            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs"
-              style={{ background: isDark ? 'rgba(245,158,11,0.08)' : 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.2)', color: '#F59E0B' }}>
-              <AlertTriangle size={13} />
-              Nenhum entregador ativo. Cadastre em Entregas → Entregadores.
-            </div>
-          )}
-
-          <div className="flex gap-3">
-            <button onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all"
-              style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
-              Cancelar
-            </button>
-            <button onClick={handleDispatch} disabled={saving}
-              className="flex-[2] flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50"
-              style={{ background: `linear-gradient(135deg,${COLORS.accent},${COLORS.purple})`, boxShadow: COLORS.accentShadow }}>
-              {saving ? <><Loader2 size={14} className="animate-spin" />Despachando...</> : <><Send size={14} />Despachar</>}
-            </button>
-          </div>
-        </div>
-      </ModalShell>
-    </ModalBackdrop>
   );
 }
 
@@ -567,7 +473,7 @@ function OrderDetailsModal({ order: initialOrder, onClose, onStatusChange, canEd
           orderId={order.id}
           drivers={drivers}
           onClose={() => setShowDispatch(false)}
-          onDispatched={() => {
+          onSuccess={() => {
             const driverRecord = editDriverId ? drivers.find(d => d.id === editDriverId) : null;
             setOrder((o: any) => ({ ...o, status: 'out_for_delivery', driver: driverRecord }));
             onStatusChange();
@@ -1001,7 +907,7 @@ export function OrdersView() {
           orderId={dispatchOrderId}
           drivers={drivers as any[]}
           onClose={() => { setShowDispatchModal(false); setDispatchOrderId(null); }}
-          onDispatched={async () => { await refetch?.(); }}
+          onSuccess={async () => { await refetch?.(); }}
         />
       )}
 

@@ -17,14 +17,13 @@ import {
   Bike, Edit, Loader2, Package, Send, Building2, DollarSign, Phone, Trash2,
   Users, TrendingUp, Calendar, BarChart3, Link2, Activity, ChevronDown, ChevronUp, Award,
 } from 'lucide-react';
+import { useIsDark } from '@/hooks/useIsDark';
+import { DispatchModal } from '@/components/orders/DispatchModal';
+import { useDriverStats } from '@/hooks/useDriverStats';
+import { useActiveStaffMembers, memberName } from '@/hooks/useActiveStaffMembers';
 
 type Tab = 'live' | 'zones' | 'drivers';
 const db = () => supabase.schema('core');
-
-function useIsDark() {
-  if (typeof window === 'undefined') return true;
-  return (getComputedStyle(document.documentElement).getPropertyValue('--bg') || '').trim().startsWith('#08');
-}
 
 function SectionLabel({ label, color = '#6366F1' }: { label: string; color?: string }) {
   return (
@@ -68,53 +67,11 @@ interface DriverStats {
   last_delivery_at: string | null;
 }
 
-function useDriverStats(storeId?: string) {
-  const [stats, setStats] = useState<DriverStats[]>([]);
-  const [loading, setLoading] = useState(true);
-  const fetch = async () => {
-    if (!storeId) return;
-    setLoading(true);
-    const { data } = await supabase.schema('core').from('driver_delivery_stats').select('*').eq('store_id', storeId);
-    if (data) setStats(data as DriverStats[]);
-    setLoading(false);
-  };
-  useEffect(() => { fetch(); }, [storeId]);
-  return { stats, loading, refetch: fetch };
-}
-
 // ─── Staff Members ────────────────────────────────────────────────────────────
 interface StaffMember {
   id: string;
   display_name: string | null;
   user: { email: string; raw_user_meta_data: { name?: string } } | null;
-}
-
-function useActiveStaffMembers(storeId?: string) {
-  const [members, setMembers] = useState<StaffMember[]>([]);
-  useEffect(() => {
-    if (!storeId) return;
-    // Usa a view staff_members_with_user que já une com auth.users via SQL
-    // evitando o join cross-schema que o PostgREST não suporta automaticamente
-    supabase.schema('core').from('staff_members_with_user')
-      .select('id, display_name, user_email, user_name, user_meta')
-      .eq('store_id', storeId).eq('status', 'active')
-      .then(({ data }) => {
-        const mapped: StaffMember[] = (data ?? []).map((row: any) => ({
-          id: row.id,
-          display_name: row.display_name,
-          user: {
-            email: row.user_email ?? '',
-            raw_user_meta_data: row.user_meta ?? {},
-          },
-        }));
-        setMembers(mapped);
-      });
-  }, [storeId]);
-  return members;
-}
-
-function memberName(m: StaffMember): string {
-  return m.display_name || m.user?.raw_user_meta_data?.name || m.user?.email?.split('@')[0] || m.id.slice(0, 8);
 }
 
 // ─── Zone Modal ───────────────────────────────────────────────────────────────
@@ -479,66 +436,6 @@ function OrderRow({ order, onDispatch, accentColor, isAdmin }: {
         </button>
       )}
     </div>
-  );
-}
-
-// ─── Dispatch Modal ───────────────────────────────────────────────────────────
-function DispatchModal({ orderId, drivers, onClose, onSuccess }: {
-  orderId: string; drivers: any[]; onClose: () => void; onSuccess: () => void;
-}) {
-  const isDark = useIsDark();
-  const [driverId, setDriverId] = useState('');
-  const [saving, setSaving] = useState(false);
-  const activeDrivers = drivers.filter(d => d.active);
-
-  const handleDispatch = async () => {
-    setSaving(true);
-    try {
-      const payload: any = { status: 'out_for_delivery' };
-      if (driverId) payload.driver_id = driverId;
-      const { error } = await supabase.schema('orders').from('orders').update(payload).eq('id', orderId);
-      if (error) throw error;
-      onSuccess(); onClose();
-    } catch (err: any) { alert(err.message); }
-    finally { setSaving(false); }
-  };
-
-  return (
-    <ModalBackdrop onClose={onClose}>
-      <ModalShell maxW="max-w-sm">
-        <ModalHeader title="Despachar Pedido" subtitle="Selecione o entregador responsável" icon={Send} iconColor={COLORS.accent} onClose={onClose} />
-        <div className="p-6 space-y-5">
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Entregador</label>
-            <div style={{ position: 'relative' }}>
-              <User size={13} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-              <select value={driverId} onChange={e => setDriverId(e.target.value)} style={{ ...selStyle, paddingLeft: '2.25rem' }}>
-                <option value="">Sem entregador específico</option>
-                {activeDrivers.map(d => (
-                  <option key={d.id} value={d.id}>{d.name}{d.vehicle ? ` · ${d.vehicle}` : ''}{d.plate ? ` (${d.plate})` : ''}</option>
-                ))}
-              </select>
-            </div>
-            <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Você pode despachar sem atribuir e editar depois.</p>
-          </div>
-          {activeDrivers.length === 0 && (
-            <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs"
-              style={{ background: isDark ? 'rgba(245,158,11,0.08)' : 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.2)', color: '#F59E0B' }}>
-              Nenhum entregador ativo cadastrado.
-            </div>
-          )}
-          <div className="flex gap-3">
-            <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-semibold"
-              style={{ background: 'var(--input-bg)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>Cancelar</button>
-            <button onClick={handleDispatch} disabled={saving}
-              className="flex-[2] flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-50"
-              style={{ background: `linear-gradient(135deg,${COLORS.accent},${COLORS.purple})`, boxShadow: COLORS.accentShadow }}>
-              {saving ? <><Loader2 size={14} className="animate-spin" />Despachando...</> : <><Send size={14} />Despachar</>}
-            </button>
-          </div>
-        </div>
-      </ModalShell>
-    </ModalBackdrop>
   );
 }
 

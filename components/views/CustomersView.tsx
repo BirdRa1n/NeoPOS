@@ -19,11 +19,7 @@ import {
   Users, UserPlus, UserCheck, Loader2,
   User, Hash, Building2, AlertTriangle, ChevronRight, FileText,
 } from 'lucide-react';
-
-function useIsDark() {
-  if (typeof window === 'undefined') return true;
-  return (getComputedStyle(document.documentElement).getPropertyValue('--bg') || '').trim().startsWith('#08');
-}
+import { useIsDark } from '@/hooks/useIsDark';
 
 const db = () => supabase.schema('core');
 
@@ -332,57 +328,57 @@ export function CustomersView() {
           {filtered.map((c: any) => (
             <div key={c.id} onClick={() => open('detail', c)}>
               <Card hover className="p-5 cursor-pointer">
-              <div className="flex items-start gap-3 mb-4">
-                <Avatar name={c.name} size="md" />
-                <div className="min-w-0 flex-1">
-                  <p className="font-bold text-sm truncate" style={{ color: 'var(--text-primary)' }}>{c.name}</p>
-                  <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
-                    Desde {new Date(c.created_at).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })}
-                  </p>
+                <div className="flex items-start gap-3 mb-4">
+                  <Avatar name={c.name} size="md" />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-sm truncate" style={{ color: 'var(--text-primary)' }}>{c.name}</p>
+                    <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                      Desde {new Date(c.created_at).toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' })}
+                    </p>
+                  </div>
+                  <ChevronRight size={14} className="shrink-0 mt-1" style={{ color: 'var(--text-muted)', opacity: 0.4 }} />
                 </div>
-                <ChevronRight size={14} className="shrink-0 mt-1" style={{ color: 'var(--text-muted)', opacity: 0.4 }} />
-              </div>
 
-              <div className="space-y-1.5 mb-4">
-                {c.phone && (
-                  <div className="flex items-center gap-2">
-                    <Phone size={12} style={{ color: '#10B981' }} />
-                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{c.phone}</span>
-                  </div>
-                )}
-                {c.email && (
-                  <div className="flex items-center gap-2">
-                    <Mail size={12} style={{ color: '#6366F1' }} />
-                    <span className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>{c.email}</span>
-                  </div>
-                )}
-                {(c.neighborhood || c.city) && (
-                  <div className="flex items-center gap-2">
-                    <MapPin size={12} style={{ color: '#8B5CF6' }} />
-                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                      {[c.neighborhood, c.city].filter(Boolean).join(', ')}
-                    </span>
-                  </div>
-                )}
-              </div>
+                <div className="space-y-1.5 mb-4">
+                  {c.phone && (
+                    <div className="flex items-center gap-2">
+                      <Phone size={12} style={{ color: '#10B981' }} />
+                      <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{c.phone}</span>
+                    </div>
+                  )}
+                  {c.email && (
+                    <div className="flex items-center gap-2">
+                      <Mail size={12} style={{ color: '#6366F1' }} />
+                      <span className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>{c.email}</span>
+                    </div>
+                  )}
+                  {(c.neighborhood || c.city) && (
+                    <div className="flex items-center gap-2">
+                      <MapPin size={12} style={{ color: '#8B5CF6' }} />
+                      <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                        {[c.neighborhood, c.city].filter(Boolean).join(', ')}
+                      </span>
+                    </div>
+                  )}
+                </div>
 
-              <div className="flex gap-2 pt-3" style={{ borderTop: '1px solid var(--border-soft)' }}
-                onClick={e => e.stopPropagation()}>
-                <button onClick={() => open('edit', c)}
-                  className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all"
-                  style={{ background: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.07)', color: '#818CF8' }}
-                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.14)'}
-                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.07)'}>
-                  <Edit size={13} /> Editar
-                </button>
-                <button onClick={() => open('delete', c)}
-                  className="w-9 h-[34px] flex items-center justify-center rounded-xl transition-all"
-                  style={{ background: isDark ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.06)', color: '#F87171' }}
-                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(239,68,68,0.18)' : 'rgba(239,68,68,0.12)'}
-                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.06)'}>
-                  <Trash2 size={14} />
-                </button>
-              </div>
+                <div className="flex gap-2 pt-3" style={{ borderTop: '1px solid var(--border-soft)' }}
+                  onClick={e => e.stopPropagation()}>
+                  <button onClick={() => open('edit', c)}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all"
+                    style={{ background: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.07)', color: '#818CF8' }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.14)'}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.07)'}>
+                    <Edit size={13} /> Editar
+                  </button>
+                  <button onClick={() => open('delete', c)}
+                    className="w-9 h-[34px] flex items-center justify-center rounded-xl transition-all"
+                    style={{ background: isDark ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.06)', color: '#F87171' }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(239,68,68,0.18)' : 'rgba(239,68,68,0.12)'}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.06)'}>
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </Card>
             </div>
           ))}

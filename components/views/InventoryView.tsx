@@ -13,6 +13,7 @@ import {
   Eye, EyeOff, RefreshCw, ChevronUp, ChevronDown,
 } from 'lucide-react';
 import type { ProductStockItem, ProductMovementType } from '@/types/database';
+import { useIsDark } from '@/hooks/useIsDark';
 
 /* ─── constants ─────────────────────────────────────────────────────────────── */
 
@@ -33,13 +34,6 @@ const PRODUCT_MOVEMENT_LABELS: Record<typeof PRODUCT_MOVEMENT_TYPES[number], str
   saida_manual: 'Saída Manual (perda/uso)',
   ajuste: 'Ajuste de Inventário',
 };
-
-/* ─── primitives ─────────────────────────────────────────────────────────────── */
-
-function useIsDark() {
-  if (typeof window === 'undefined') return true;
-  return (getComputedStyle(document.documentElement).getPropertyValue('--bg') || '').trim().startsWith('#08');
-}
 
 function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (

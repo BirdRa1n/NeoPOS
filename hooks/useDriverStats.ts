@@ -27,7 +27,11 @@ export function useDriverStats(storeId?: string) {
   const fetch = async () => {
     if (!storeId) return;
     setLoading(true);
-    const { data } = await supabase.schema('core').from('driver_delivery_stats').select('*').eq('store_id', storeId);
+    const { data } = await supabase
+      .schema('core')
+      .from('driver_delivery_stats')
+      .select('*')
+      .eq('store_id', storeId);
     if (data) setStats(data as DriverStats[]);
     setLoading(false);
   };
