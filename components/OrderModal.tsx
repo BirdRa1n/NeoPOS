@@ -241,7 +241,7 @@ export function OrderModal({ storeId, onClose, onSuccess, canCreateTypes }: Orde
         <ModalBackdrop onClose={onClose}>
             <div style={{
                 position: 'relative', display: 'flex', flexDirection: 'column',
-                background: 'var(--surface)', border: '1px solid var(--border)',
+                background: 'var(--modal-bg)', border: '1px solid var(--border)',
                 borderRadius: 20, boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
                 width: '100%', maxWidth: 680, height: '90vh', maxHeight: 800, overflow: 'hidden',
             }}>
@@ -321,7 +321,7 @@ export function OrderModal({ storeId, onClose, onSuccess, canCreateTypes }: Orde
         <ModalBackdrop onClose={onClose}>
             <div style={{
                 position: 'relative', display: 'flex', flexDirection: 'column',
-                background: 'var(--surface)', border: '1px solid var(--border)',
+                background: 'var(--modal-bg)', border: '1px solid var(--border)',
                 borderRadius: 20, boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
                 width: '100%', maxWidth: 600, height: '90vh', maxHeight: 800, overflow: 'hidden',
             }}>
@@ -559,7 +559,7 @@ export function OrderModal({ storeId, onClose, onSuccess, canCreateTypes }: Orde
                     </div>
 
                     {/* Footer fixo */}
-                    <div style={{ flexShrink: 0, display: 'flex', gap: 10, padding: '12px 20px', borderTop: '1px solid var(--border)', background: 'var(--surface)' }}>
+                    <div style={{ flexShrink: 0, display: 'flex', gap: 10, padding: '12px 20px', borderTop: '1px solid var(--border)', background: 'var(--modal-bg)' }}>
                         <button
                             type="button"
                             onClick={() => setStep(1)}

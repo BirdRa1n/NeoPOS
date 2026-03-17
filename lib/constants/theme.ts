@@ -158,6 +158,7 @@ export const THEMES: Record<Theme, Record<string, string>> = {
     '--header-bg':             'rgba(8,11,18,0.85)',
     '--scrollbar':             'rgba(255,255,255,0.08)',
     '--surface-box':           '0 1px 3px rgba(0,0,0,0.3)',
+    '--modal-bg':              '#0F1117',
     // Sidebar — derivado de BRAND
     '--sidebar-bg':            'linear-gradient(180deg,#0F1117 0%,#0A0D14 100%)',
     '--sidebar-border':        'rgba(255,255,255,0.05)',
@@ -188,6 +189,7 @@ export const THEMES: Record<Theme, Record<string, string>> = {
     '--header-bg':             'rgba(241,244,250,0.9)',
     '--scrollbar':             'rgba(0,0,0,0.1)',
     '--surface-box':           '0 1px 4px rgba(0,0,0,0.06)',
+    '--modal-bg':              '#FFFFFF',
     // Sidebar — derivado de BRAND
     '--sidebar-bg':            'linear-gradient(180deg,#FFFFFF 0%,#F9FAFB 100%)',
     '--sidebar-border':        'rgba(0,0,0,0.08)',

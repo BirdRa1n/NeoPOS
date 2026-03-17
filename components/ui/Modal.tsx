@@ -29,10 +29,11 @@ interface ModalShellProps {
 export function ModalShell({ children, maxW = 'max-w-lg' }: ModalShellProps) {
   return (
     <div
-      className={`w-full ${maxW} max-h-[92vh] flex flex-col rounded-2xl overflow-hidden shadow-[var(--surface-box)]`}
+      className={`w-full ${maxW} max-h-[92vh] flex flex-col rounded-2xl overflow-hidden`}
       style={{
-        background: 'var(--bg)',
-        border: '1px solid var(--border)'
+        background: 'var(--modal-bg)',
+        border: '1px solid var(--border)',
+        boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
       }}
     >
       {children}
