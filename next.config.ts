@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
         source: "/api/functions/:path*",
         destination: "https://moinedjbjuioncemqomf.supabase.co/functions/v1/:path*",
       },
+      {
+        source: "/:nickname/cardapio",
+        destination: "/:nickname/catalogo",
+      },
     ];
   },
 };
