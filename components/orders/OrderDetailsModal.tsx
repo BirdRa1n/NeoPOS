@@ -1,15 +1,21 @@
-import { useState, useEffect } from 'react';
-import {
-  ShoppingCart, AlertTriangle, Loader2, CheckSquare,
-  CheckCircle2, Send, User, X, DollarSign,
-} from 'lucide-react';
-import { supabase } from '@/supabase/client';
-import { formatCurrency } from '@/lib/utils/format';
-import { useIsDark } from '@/hooks/useIsDark';
-import { ModalBackdrop, ModalShell, ModalHeader } from '@/components/ui/Modal';
 import { DispatchModal } from '@/components/orders/DispatchModal';
-import { COLORS, ALPHA } from '@/lib/constants';
-import { PAYMENT_LABELS, PAYMENT_ICONS, PAYMENT_OPTIONS } from '@/types/orders';
+import { ModalBackdrop, ModalHeader, ModalShell } from '@/components/ui/Modal';
+import { useIsDark } from '@/hooks/useIsDark';
+import { ALPHA, COLORS } from '@/lib/constants';
+import { formatCurrency } from '@/lib/utils/format';
+import { supabase } from '@/supabase/client';
+import { PAYMENT_ICONS, PAYMENT_LABELS, PAYMENT_OPTIONS } from '@/types/orders';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  CheckSquare,
+  DollarSign,
+  Loader2,
+  Send,
+  ShoppingCart,
+  User, X,
+} from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { OrderStatusBadge } from './OrderStatusBadge';
 
 const STATUS_FLOW = ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'delivered'];
@@ -311,6 +317,10 @@ export function OrderDetailsModal({ order: initialOrder, drivers, onClose, onSta
                 <div className="p-3 rounded-xl inline-flex items-center gap-2" style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
                   <PayIcon size={14} style={{ color: '#10B981' }} />
                   <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{PAYMENT_LABELS[order.payment_method] ?? order.payment_method}</span>
+
+                  {order?.payment_method === "cash" && order?.change_for && (
+                    <span className="text-sm font-semibold ml-2" style={{ color: 'var(--text-muted)' }}>(Troco para {formatCurrency(order.change_for)})</span>
+                  )}
                 </div>
               ) : (
                 <div className="grid grid-cols-3 gap-2">
