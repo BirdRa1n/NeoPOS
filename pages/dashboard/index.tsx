@@ -1,37 +1,35 @@
 "use client";
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { useStore } from '@/contexts/StoreContext';
-import { useTheme, ThemeProvider } from '@/contexts/ThemeContext';
-import { StaffProvider, useStaff } from '@/contexts/StaffContext';
-import { StaffBlockedScreen } from '@/components/StaffBlockedScreen';
-import { useOrders } from '@/hooks/useOrders';
-import { useTodaySummary } from '@/hooks/useFinance';
-import { useProducts } from '@/hooks/useProducts';
-import { useCustomers } from '@/hooks/useCustomers';
-import { useRouter } from 'next/router';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
-import { ProductsView } from '@/components/views/ProductsView';
-import { OrdersView } from '@/components/views/OrdersView';
-import { CustomersView } from '@/components/views/CustomersView';
-import { DeliveryView, DriverDashboard } from '@/components/views/DeliveryView';
-import { InventoryView } from '@/components/views/InventoryView';
-import { FinanceView } from '@/components/views/FinanceView';
-import { StoreSettingsView } from '@/components/views/StoreSettingsView';
-import { StatusBadge } from '@/components/dashboard/StatusBadge';
+import { DriverDashboard } from '@/components/dashboard/DriverDashboard';
 import { MetricCard } from '@/components/dashboard/MetricCard';
 import { SectionCard } from '@/components/dashboard/SectionCard';
-import { formatCurrency } from '@/lib/utils/format';
+import { StatusBadge } from '@/components/dashboard/StatusBadge';
+import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { StaffBlockedScreen } from '@/components/StaffBlockedScreen';
+import { CustomersView } from '@/components/views/CustomersView';
+import { DeliveryView } from '@/components/views/DeliveryView';
+import { FinanceView } from '@/components/views/FinanceView';
+import { InventoryView } from '@/components/views/InventoryView';
+import { OrdersView } from '@/components/views/OrdersView';
+import { ProductsView } from '@/components/views/ProductsView';
+import { StoreSettingsView } from '@/components/views/StoreSettingsView';
+import { useAuth } from '@/contexts/AuthContext';
+import { StaffProvider, useStaff } from '@/contexts/StaffContext';
+import { useStore } from '@/contexts/StoreContext';
+import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
+import { useCustomers } from '@/hooks/useCustomers';
+import { useTodaySummary } from '@/hooks/useFinance';
+import { useOrders } from '@/hooks/useOrders';
+import { useProducts } from '@/hooks/useProducts';
+import { ALPHA, COLORS } from '@/lib/constants';
 import { THEMES } from '@/lib/constants/theme';
-import { COLORS, ALPHA } from '@/lib/constants';
-import { Settings } from 'lucide-react';
-import {
-  LayoutDashboard, Package, ShoppingCart, Users, Truck,
-  Warehouse, DollarSign, LogOut, ChevronRight,
-  Clock, CheckCircle2, BarChart3, Activity, Menu, Search, Moon, Sun,
-  ShieldAlert,
-} from 'lucide-react';
+import { formatCurrency } from '@/lib/utils/format';
 import { Box } from '@gravity-ui/icons';
+import {
+  Activity, BarChart3, CheckCircle2, ChevronRight,
+  Clock, DollarSign, LayoutDashboard, LogOut, Menu, Moon, Package, Search, Settings, ShieldAlert, ShoppingCart, Sun, Truck, Users, Warehouse
+} from 'lucide-react';
+import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type TabId = 'dashboard' | 'products' | 'orders' | 'customers' | 'delivery' | 'inventory' | 'finance' | 'settings';

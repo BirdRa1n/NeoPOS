@@ -1,0 +1,21 @@
+{
+    // Formatar automaticamente ao salvar
+    "editor.formatOnSave": true,
+    // Usar o Prettier como formatador padrão
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    // Corrigir automaticamente problemas ao salvar (ESLint)
+    "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": true,
+        "source.organizeImports": true
+    },
+    // ESLint rodando nos arquivos
+    "eslint.validate": [
+        "javascript",
+        "javascriptreact",
+        "typescript",
+        "typescriptreact"
+    ],
+    // Opcional: remover imports não usados automaticamente
+    "typescript.preferences.removeUnusedImports": true,
+    "javascript.preferences.removeUnusedImports": true
+}
