@@ -350,9 +350,9 @@ export function OrderDetailsModal({ order: initialOrder, drivers, onClose, onSta
           orderId={order.id}
           drivers={drivers}
           onClose={() => setShowDispatch(false)}
-          onSuccess={() => {
-            const driverRecord = editDriverId ? drivers.find(d => d.id === editDriverId) : null;
-            setOrder((o: any) => ({ ...o, status: 'out_for_delivery', driver: driverRecord }));
+          onSuccess={(driverId) => {
+            const driverRecord = driverId ? drivers.find(d => d.id === driverId) : null;
+            setOrder((o: any) => ({ ...o, status: 'out_for_delivery', driver_id: driverId || null, driver: driverRecord ?? null }));
             onStatusChange();
           }}
         />

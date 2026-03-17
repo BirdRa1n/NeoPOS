@@ -21,7 +21,7 @@ interface DispatchModalProps {
   orderId: string;
   drivers: any[];
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (driverId: string) => void;
 }
 
 export function DispatchModal({ orderId, drivers, onClose, onSuccess }: DispatchModalProps) {
@@ -41,7 +41,7 @@ export function DispatchModal({ orderId, drivers, onClose, onSuccess }: Dispatch
         .update(payload)
         .eq('id', orderId);
       if (error) throw error;
-      onSuccess();
+      onSuccess(driverId);
       onClose();
     } catch (err: any) {
       alert(err.message);
