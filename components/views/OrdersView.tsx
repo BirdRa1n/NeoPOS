@@ -14,6 +14,7 @@ import { useStore } from '@/contexts/StoreContext';
 import { useDeliveryDrivers } from '@/hooks/useDelivery';
 import { useIsDark } from '@/hooks/useIsDark';
 import { useOrders } from '@/hooks/useOrders';
+import { COLORS } from '@/lib/constants';
 import type { OrderStatus } from '@/types';
 import { ORDER_TYPE_LABELS } from '@/types/orders';
 import { ShoppingCart } from 'lucide-react';
@@ -78,7 +79,7 @@ export function OrdersView() {
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
-      <div className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+      <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: COLORS.accent, borderTopColor: 'transparent' }} />
     </div>
   );
 

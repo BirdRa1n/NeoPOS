@@ -6,6 +6,7 @@ import { ViewLoadingSpinner } from '@/components/ui/ViewLoadingSpinner';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useDailySummaries } from '@/hooks/useFinance';
 import { formatCurrency } from '@/lib/utils/format';
+import { BRAND, COLORS } from '@/lib/constants';
 import { FinanceTotals, Period, PERIOD_DAYS, PERIOD_LABELS } from '@/types/finance';
 import {
   Banknote,
@@ -49,9 +50,9 @@ export function FinanceView() {
   if (loading) return <ViewLoadingSpinner />;
 
   const PAYMENT_METHODS = [
-    { label: 'Dinheiro', value: totals.cash, color: '#10B981', icon: Banknote, pct: totals.gross > 0 ? (totals.cash / totals.gross) * 100 : 0 },
-    { label: 'Cartão', value: totals.card, color: '#6366F1', icon: CreditCard, pct: totals.gross > 0 ? (totals.card / totals.gross) * 100 : 0 },
-    { label: 'PIX', value: totals.pix, color: '#8B5CF6', icon: Smartphone, pct: totals.gross > 0 ? (totals.pix / totals.gross) * 100 : 0 },
+    { label: 'Dinheiro', value: totals.cash, color: COLORS.success, icon: Banknote, pct: totals.gross > 0 ? (totals.cash / totals.gross) * 100 : 0 },
+    { label: 'Cartão', value: totals.card, color: COLORS.accent, icon: CreditCard, pct: totals.gross > 0 ? (totals.card / totals.gross) * 100 : 0 },
+    { label: 'PIX', value: totals.pix, color: COLORS.purple, icon: Smartphone, pct: totals.gross > 0 ? (totals.pix / totals.gross) * 100 : 0 },
   ];
 
   return (
@@ -65,30 +66,30 @@ export function FinanceView() {
       </div>
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard label="Receita Bruta" value={formatCurrency(totals.gross)} icon={DollarSign} color="#6366F1" sub={`${totals.orders} pedidos`} glow />
-        <StatCard label="Receita Líquida" value={formatCurrency(totals.net)} icon={TrendingUp} color="#10B981" sub={`Margem ${margin}%`} trend="up" glow />
-        <StatCard label="Descontos" value={formatCurrency(totals.discount)} icon={TrendingDown} color="#EF4444" sub="Total de desconto" glow />
-        <StatCard label="Ticket Médio" value={formatCurrency(avgTicket)} icon={BarChart3} color="#F59E0B" sub={`${totals.orders} pedidos`} glow />
+        <StatCard label="Receita Bruta" value={formatCurrency(totals.gross)} icon={DollarSign} color={COLORS.accent} sub={`${totals.orders} pedidos`} glow />
+        <StatCard label="Receita Líquida" value={formatCurrency(totals.net)} icon={TrendingUp} color={COLORS.success} sub={`Margem ${margin}%`} trend="up" glow />
+        <StatCard label="Descontos" value={formatCurrency(totals.discount)} icon={TrendingDown} color={COLORS.danger} sub="Total de desconto" glow />
+        <StatCard label="Ticket Médio" value={formatCurrency(avgTicket)} icon={BarChart3} color={COLORS.warning} sub={`${totals.orders} pedidos`} glow />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <SectionCard title="Métodos de Pagamento" icon={CreditCard} iconColor="#6366F1">
+        <SectionCard title="Métodos de Pagamento" icon={CreditCard} iconColor={COLORS.accent}>
           <div className="px-5 pb-5 space-y-4">
             {PAYMENT_METHODS.map((pm) => <PaymentMethodBar key={pm.label} {...pm} />)}
           </div>
         </SectionCard>
 
-        <SectionCard title="Resumo do Período" icon={Receipt} iconColor="#10B981">
+        <SectionCard title="Resumo do Período" icon={Receipt} iconColor={COLORS.success}>
           <div className="px-5 pb-5 space-y-3">
-            <SummaryLine label="Receita Bruta" value={totals.gross} color="#6366F1" positive isDark={isDark} />
-            <SummaryLine label="Descontos" value={-totals.discount} color="#EF4444" positive={false} isDark={isDark} />
-            <SummaryLine label="Taxa de Entrega" value={totals.fees} color="#F59E0B" positive isDark={isDark} />
+            <SummaryLine label="Receita Bruta" value={totals.gross} color={COLORS.accent} positive isDark={isDark} />
+            <SummaryLine label="Descontos" value={-totals.discount} color={COLORS.danger} positive={false} isDark={isDark} />
+            <SummaryLine label="Taxa de Entrega" value={totals.fees} color={COLORS.warning} positive isDark={isDark} />
             <NetRevenueRow value={totals.net} isDark={isDark} />
           </div>
         </SectionCard>
       </div>
 
-      <SectionCard title="Histórico Diário" icon={Calendar} iconColor="#6366F1">
+      <SectionCard title="Histórico Diário" icon={Calendar} iconColor={COLORS.accent}>
         <DailyHistoryTable summaries={summaries} isDark={isDark} />
       </SectionCard>
     </div>

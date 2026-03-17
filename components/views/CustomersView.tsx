@@ -19,11 +19,12 @@ import {
   Users, UserPlus, UserCheck, Loader2,
   User, Hash, Building2, AlertTriangle, ChevronRight, FileText,
 } from 'lucide-react';
+import { COLORS, ALPHA } from '@/lib/constants';
 import { useIsDark } from '@/hooks/useIsDark';
 
 const db = () => supabase.schema('core');
 
-function SectionDivider({ label, color = '#6366F1' }: { label: string; color?: string }) {
+function SectionDivider({ label, color = COLORS.accent }: { label: string; color?: string }) {
   return (
     <div className="flex items-center gap-3">
       <p className="text-[10px] font-bold uppercase tracking-widest whitespace-nowrap" style={{ color }}>{label}</p>
@@ -81,7 +82,7 @@ function CustomerModal({ customer, storeId, onClose, onSuccess }: {
         <ModalHeader title={isEdit ? 'Editar Cliente' : 'Novo Cliente'} subtitle={isEdit ? `Editando: ${customer.name}` : 'Preencha os dados do cliente'} icon={User} onClose={onClose} />
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
           <div className="p-6 space-y-5">
-            <SectionDivider label="Dados Pessoais" color="#6366F1" />
+            <SectionDivider label="Dados Pessoais" color={COLORS.accent} />
             <FormField label="Nome Completo" required>
               <Input icon={User} value={form.name} onChange={set('name')} placeholder="João da Silva" required />
             </FormField>
@@ -95,7 +96,7 @@ function CustomerModal({ customer, storeId, onClose, onSuccess }: {
             </div>
 
             <div style={{ height: 1, background: 'var(--border)' }} />
-            <SectionDivider label="Endereço" color="#8B5CF6" />
+            <SectionDivider label="Endereço" color={COLORS.purple} />
 
             <FormField label="Endereço (rua e número)">
               <Input icon={MapPin} value={form.address} onChange={set('address')} placeholder="Rua das Flores, 123" />
@@ -125,7 +126,7 @@ function CustomerModal({ customer, storeId, onClose, onSuccess }: {
             </div>
 
             <div style={{ height: 1, background: 'var(--border)' }} />
-            <SectionDivider label="Observações" color="#F59E0B" />
+            <SectionDivider label="Observações" color={COLORS.warning} />
             <FormField label="Notas internas">
               <Textarea value={form.notes} onChange={set('notes')} placeholder="Preferências, alergias, informações extras..." rows={3} />
             </FormField>
@@ -154,7 +155,7 @@ function CustomerDetail({ customer, onClose, onEdit }: { customer: any; onClose:
         <ModalHeader title="Perfil do Cliente" icon={User} onClose={onClose} />
         <div className="flex-1 overflow-y-auto">
           <div className="flex flex-col items-center gap-2 px-6 pt-7 pb-5"
-            style={{ background: isDark ? 'rgba(99,102,241,0.04)' : 'rgba(99,102,241,0.03)', borderBottom: '1px solid var(--border)' }}>
+            style={{ background: isDark ? ALPHA.accentBgSubtleD : ALPHA.accentBgSubtleL, borderBottom: '1px solid var(--border)' }}>
             <Avatar name={customer.name} size="xl" />
             <p className="font-bold text-base mt-1" style={{ color: 'var(--text-primary)' }}>{customer.name}</p>
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
@@ -169,20 +170,20 @@ function CustomerDetail({ customer, onClose, onEdit }: { customer: any; onClose:
           <div className="p-5 space-y-4">
             {(customer.phone || customer.email) && (
               <div className="space-y-2">
-                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#6366F1' }}>Contato</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: COLORS.accent }}>Contato</p>
                 {customer.phone && (
                   <a href={`tel:${customer.phone}`}
                     className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all"
-                    style={{ background: isDark ? 'rgba(16,185,129,0.07)' : 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.12)' }}>
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(16,185,129,0.15)' }}><Phone size={13} style={{ color: '#10B981' }} /></div>
+                    style={{ background: isDark ? ALPHA.successBgD : ALPHA.successBgL, border: '1px solid rgba(16,185,129,0.12)' }}>
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: ALPHA.successBgD }}><Phone size={13} style={{ color: COLORS.success }} /></div>
                     <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{customer.phone}</span>
                   </a>
                 )}
                 {customer.email && (
                   <a href={`mailto:${customer.email}`}
                     className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all"
-                    style={{ background: isDark ? 'rgba(99,102,241,0.07)' : 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.12)' }}>
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'rgba(99,102,241,0.15)' }}><Mail size={13} style={{ color: '#6366F1' }} /></div>
+                    style={{ background: isDark ? ALPHA.accentBgSubtleD : ALPHA.accentBgSubtleL, border: `1px solid ${ALPHA.accentBorder}` }}>
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: ALPHA.accentBgD }}><Mail size={13} style={{ color: COLORS.accent }} /></div>
                     <span className="text-sm font-medium truncate" style={{ color: 'var(--text-primary)' }}>{customer.email}</span>
                   </a>
                 )}
@@ -191,10 +192,10 @@ function CustomerDetail({ customer, onClose, onEdit }: { customer: any; onClose:
 
             {addressParts.length > 0 && (
               <div className="space-y-2">
-                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#8B5CF6' }}>Endereço</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: COLORS.purple }}>Endereço</p>
                 <div className="flex items-start gap-3 px-3.5 py-3 rounded-xl"
-                  style={{ background: isDark ? 'rgba(139,92,246,0.07)' : 'rgba(139,92,246,0.05)', border: '1px solid rgba(139,92,246,0.12)' }}>
-                  <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5" style={{ background: 'rgba(139,92,246,0.15)' }}><MapPin size={13} style={{ color: '#8B5CF6' }} /></div>
+                  style={{ background: isDark ? ALPHA.purpleBgD : ALPHA.purpleBgL, border: `1px solid ${ALPHA.purpleBgD}` }}>
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5" style={{ background: ALPHA.purpleBgD }}><MapPin size={13} style={{ color: COLORS.purple }} /></div>
                   <div className="space-y-0.5">
                     {addressParts.map((line, i) => (
                       <p key={i} className="text-sm" style={{ color: i === 0 ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{line}</p>
@@ -206,7 +207,7 @@ function CustomerDetail({ customer, onClose, onEdit }: { customer: any; onClose:
 
             {customer.notes && (
               <div className="space-y-2">
-                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#F59E0B' }}>Observações</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: COLORS.warning }}>Observações</p>
                 <div className="flex items-start gap-3 px-3.5 py-3 rounded-xl"
                   style={{ background: isDark ? 'rgba(245,158,11,0.06)' : 'rgba(245,158,11,0.04)', border: '1px solid rgba(245,158,11,0.12)' }}>
                   <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5" style={{ background: 'rgba(245,158,11,0.15)' }}><FileText size={13} style={{ color: '#F59E0B' }} /></div>
@@ -232,7 +233,7 @@ function DeleteConfirm({ customer, onClose, onConfirm, loading }: { customer: an
     <ModalBackdrop onClose={onClose}>
       <ModalShell maxW="max-w-sm">
         <div className="p-7 flex flex-col items-center text-center gap-4">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: isDark ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.07)' }}>
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ background: isDark ? ALPHA.dangerBgD : ALPHA.dangerBgL }}>
             <AlertTriangle size={26} style={{ color: '#EF4444' }} />
           </div>
           <div>
@@ -299,7 +300,7 @@ export function CustomersView() {
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
-      <div className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+      <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: COLORS.accent, borderTopColor: 'transparent' }} />
     </div>
   );
 
@@ -313,9 +314,9 @@ export function CustomersView() {
         />
 
         <div className="grid grid-cols-3 gap-3">
-          <StatCard label="Total de Clientes" value={list.length} icon={Users} color="#6366F1" />
-          <StatCard label="Novos este mês" value={newThisMonth} icon={UserPlus} color="#10B981" />
-          <StatCard label="Ativos" value={list.filter((c: any) => c.active !== false).length} icon={UserCheck} color="#8B5CF6" />
+          <StatCard label="Total de Clientes" value={list.length} icon={Users} color={COLORS.accent} />
+          <StatCard label="Novos este mês" value={newThisMonth} icon={UserPlus} color={COLORS.success} />
+          <StatCard label="Ativos" value={list.filter((c: any) => c.active !== false).length} icon={UserCheck} color={COLORS.purple} />
         </div>
 
         <SearchBar
@@ -348,13 +349,13 @@ export function CustomersView() {
                   )}
                   {c.email && (
                     <div className="flex items-center gap-2">
-                      <Mail size={12} style={{ color: '#6366F1' }} />
+                      <Mail size={12} style={{ color: COLORS.accent }} />
                       <span className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>{c.email}</span>
                     </div>
                   )}
                   {(c.neighborhood || c.city) && (
                     <div className="flex items-center gap-2">
-                      <MapPin size={12} style={{ color: '#8B5CF6' }} />
+                      <MapPin size={12} style={{ color: COLORS.purple }} />
                       <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                         {[c.neighborhood, c.city].filter(Boolean).join(', ')}
                       </span>
@@ -366,16 +367,16 @@ export function CustomersView() {
                   onClick={e => e.stopPropagation()}>
                   <button onClick={() => open('edit', c)}
                     className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all"
-                    style={{ background: isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.07)', color: '#818CF8' }}
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.14)'}
-                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.07)'}>
+                    style={{ background: isDark ? ALPHA.accentBgSubtleD : ALPHA.accentBgSubtleL, color: COLORS.accentLight }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? ALPHA.accentBgD : ALPHA.accentBgL}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = isDark ? ALPHA.accentBgSubtleD : ALPHA.accentBgSubtleL}>
                     <Edit size={13} /> Editar
                   </button>
                   <button onClick={() => open('delete', c)}
                     className="w-9 h-[34px] flex items-center justify-center rounded-xl transition-all"
-                    style={{ background: isDark ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.06)', color: '#F87171' }}
-                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(239,68,68,0.18)' : 'rgba(239,68,68,0.12)'}
-                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(239,68,68,0.08)' : 'rgba(239,68,68,0.06)'}>
+                    style={{ background: isDark ? ALPHA.dangerBgSubtle : ALPHA.dangerBgL, color: COLORS.dangerLight }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? ALPHA.dangerBgD : ALPHA.dangerBgL}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = isDark ? ALPHA.dangerBgSubtle : ALPHA.dangerBgL}>
                     <Trash2 size={14} />
                   </button>
                 </div>

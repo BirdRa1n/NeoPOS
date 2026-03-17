@@ -8,7 +8,7 @@ import { useDeliveryDrivers, useDeliveryZones } from '@/hooks/useDelivery';
 import { useDriverStats } from '@/hooks/useDriverStats';
 import { useIsDark } from '@/hooks/useIsDark';
 import { useOrders } from '@/hooks/useOrders';
-import { COLORS } from '@/lib/constants';
+import { COLORS, ALPHA } from '@/lib/constants';
 import { formatCurrency } from '@/lib/utils/format';
 import { supabase } from '@/supabase/client';
 import {
@@ -95,14 +95,14 @@ export function DeliveryView() {
           {isAdmin && tab === 'zones' && (
             <button onClick={() => open('zone-create')}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90"
-              style={{ background: 'linear-gradient(135deg,#10B981,#059669)', boxShadow: '0 4px 14px rgba(16,185,129,0.3)' }}>
+              style={{ background: COLORS.successGradient, boxShadow: COLORS.successShadow }}>
               <Plus size={15} /> Nova Zona
             </button>
           )}
           {isAdmin && tab === 'drivers' && (
             <button onClick={() => open('driver-create')}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90"
-              style={{ background: 'linear-gradient(135deg,#8B5CF6,#7C3AED)', boxShadow: '0 4px 14px rgba(139,92,246,0.3)' }}>
+              style={{ background: `linear-gradient(135deg,${COLORS.purple},#7C3AED)`, boxShadow: `0 4px 14px ${ALPHA.purpleBgD}` }}>
               <Plus size={15} /> Novo Entregador
             </button>
           )}
@@ -111,10 +111,10 @@ export function DeliveryView() {
         {/* Stats strip */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: 'Em Trânsito', value: activeDeliveries.length, color: '#6366F1', icon: Truck },
-            { label: 'Aguardando', value: pendingDeliveries.length, color: '#F59E0B', icon: Clock },
-            { label: tab === 'drivers' ? 'Entregas hoje' : 'Entregues Hoje', value: tab === 'drivers' ? totalDeliveriesToday : doneToday.length, color: '#10B981', icon: CheckCircle2 },
-            { label: tab === 'drivers' ? 'Entregas (mês)' : 'Entregadores Ativos', value: tab === 'drivers' ? totalDeliveriesMonth : activeDrivers.length, color: '#8B5CF6', icon: tab === 'drivers' ? TrendingUp : Navigation },
+            { label: 'Em Trânsito', value: activeDeliveries.length, color: COLORS.accent, icon: Truck },
+            { label: 'Aguardando', value: pendingDeliveries.length, color: COLORS.warning, icon: Clock },
+            { label: tab === 'drivers' ? 'Entregas hoje' : 'Entregues Hoje', value: tab === 'drivers' ? totalDeliveriesToday : doneToday.length, color: COLORS.success, icon: CheckCircle2 },
+            { label: tab === 'drivers' ? 'Entregas (mês)' : 'Entregadores Ativos', value: tab === 'drivers' ? totalDeliveriesMonth : activeDrivers.length, color: COLORS.purple, icon: tab === 'drivers' ? TrendingUp : Navigation },
           ].map(({ label, value, color, icon: Icon }) => (
             <div key={label} className="rounded-2xl px-4 py-3 flex items-center gap-3"
               style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--surface-box)' }}>
@@ -135,8 +135,8 @@ export function DeliveryView() {
             <button key={id} onClick={() => setTab(id)}
               className="px-4 py-1.5 rounded-lg text-xs font-semibold transition-all"
               style={{
-                background: tab === id ? (isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.12)') : 'transparent',
-                color: tab === id ? '#818CF8' : 'var(--text-muted)',
+                background: tab === id ? (isDark ? ALPHA.accentBgD : ALPHA.accentBgL) : 'transparent',
+                color: tab === id ? COLORS.accentLight : 'var(--text-muted)',
               }}>
               {label}
             </button>
@@ -147,8 +147,8 @@ export function DeliveryView() {
         {tab === 'live' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {[
-              { title: 'Em Andamento', list: activeDeliveries, color: '#6366F1', icon: Truck, emptyText: 'Nenhuma entrega em andamento', dispatch: false },
-              { title: 'Aguardando Despacho', list: pendingDeliveries, color: '#F59E0B', icon: Package, emptyText: 'Nenhum pedido aguardando', dispatch: true },
+              { title: 'Em Andamento', list: activeDeliveries, color: COLORS.accent, icon: Truck, emptyText: 'Nenhuma entrega em andamento', dispatch: false },
+              { title: 'Aguardando Despacho', list: pendingDeliveries, color: COLORS.warning, icon: Package, emptyText: 'Nenhum pedido aguardando', dispatch: true },
             ].map(({ title, list, color, icon: Icon, emptyText, dispatch }) => (
               <div key={title} className="rounded-2xl overflow-hidden"
                 style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--surface-box)' }}>
@@ -196,7 +196,7 @@ export function DeliveryView() {
                       <td className="px-5 py-4 font-semibold" style={{ color: 'var(--text-primary)' }}>{zone.neighborhood}</td>
                       <td className="px-5 py-4" style={{ color: 'var(--text-secondary)' }}>{zone.city}</td>
                       <td className="px-5 py-4 text-xs font-mono" style={{ color: 'var(--text-muted)' }}>{zone.state}</td>
-                      <td className="px-5 py-4 font-bold" style={{ color: '#10B981' }}>{formatCurrency(zone.delivery_fee)}</td>
+                      <td className="px-5 py-4 font-bold" style={{ color: COLORS.success }}>{formatCurrency(zone.delivery_fee)}</td>
                       <td className="px-5 py-4">
                         <span className="inline-flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-secondary)' }}>
                           <Clock size={12} style={{ color: 'var(--text-muted)' }} />
@@ -217,10 +217,10 @@ export function DeliveryView() {
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button onClick={() => open('zone-edit', zone)} className="w-8 h-8 flex items-center justify-center rounded-xl transition-all" style={{ color: 'var(--text-muted)' }}
-                              onMouseEnter={e => Object.assign((e.currentTarget as HTMLElement).style, { background: 'rgba(99,102,241,0.12)', color: '#818CF8' })}
+                              onMouseEnter={e => Object.assign((e.currentTarget as HTMLElement).style, { background: ALPHA.accentBgSubtleD, color: COLORS.accentLight })}
                               onMouseLeave={e => Object.assign((e.currentTarget as HTMLElement).style, { background: 'transparent', color: 'var(--text-muted)' })}><Edit size={14} /></button>
                             <button onClick={() => open('zone-delete', zone)} className="w-8 h-8 flex items-center justify-center rounded-xl transition-all" style={{ color: 'var(--text-muted)' }}
-                              onMouseEnter={e => Object.assign((e.currentTarget as HTMLElement).style, { background: 'rgba(239,68,68,0.12)', color: '#F87171' })}
+                              onMouseEnter={e => Object.assign((e.currentTarget as HTMLElement).style, { background: ALPHA.dangerBgSubtle, color: COLORS.dangerLight })}
                               onMouseLeave={e => Object.assign((e.currentTarget as HTMLElement).style, { background: 'transparent', color: 'var(--text-muted)' })}><Trash2 size={14} /></button>
                           </div>
                         </td>
@@ -237,7 +237,7 @@ export function DeliveryView() {
                 {isAdmin && (
                   <button onClick={() => open('zone-create')}
                     className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white hover:opacity-90"
-                    style={{ background: 'linear-gradient(135deg,#10B981,#059669)' }}>
+                    style={{ background: COLORS.successGradient }}>
                     <Plus size={14} /> Criar Zona
                   </button>
                 )}
@@ -273,7 +273,7 @@ export function DeliveryView() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {statsLoading ? (
                 <div className="col-span-full flex justify-center py-16">
-                  <div className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+                  <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: COLORS.accent, borderTopColor: 'transparent' }} />
                 </div>
               ) : driverStats.length === 0 ? (
                 <div className="col-span-full flex flex-col items-center py-16 gap-3">
@@ -282,7 +282,7 @@ export function DeliveryView() {
                   {isAdmin && (
                     <button onClick={() => open('driver-create')}
                       className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white hover:opacity-90"
-                      style={{ background: 'linear-gradient(135deg,#8B5CF6,#7C3AED)' }}>
+                      style={{ background: `linear-gradient(135deg,${COLORS.purple},#7C3AED)` }}>
                       <Plus size={14} /> Cadastrar Entregador
                     </button>
                   )}

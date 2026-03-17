@@ -3,6 +3,7 @@ import { useInventory, useProductStock } from '@/hooks/useInventory';
 import { useStore } from '@/contexts/StoreContext';
 import { useIsDark } from '@/hooks/useIsDark';
 import { Search, Plus, Package } from 'lucide-react';
+import { COLORS, ALPHA } from '@/lib/constants';
 import { SortKey, InventoryTab, InventoryModal } from '@/types/inventory';
 import {
   InventoryTabs, InventoryStatsStrip, LowStockAlert,
@@ -67,7 +68,7 @@ export function InventoryView() {
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
-      <div className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+      <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: COLORS.accent, borderTopColor: 'transparent' }} />
     </div>
   );
 
@@ -82,7 +83,7 @@ export function InventoryView() {
           <button
             onClick={() => { setSelected(null); setModal('supply-create'); }}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90"
-            style={{ background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', boxShadow: '0 4px 14px rgba(99,102,241,0.3)' }}
+            style={{ background: COLORS.accentGradient, boxShadow: COLORS.accentShadow }}
           >
             <Plus size={15} /> Novo Insumo
           </button>
@@ -102,8 +103,8 @@ export function InventoryView() {
           onChange={e => setSearch(e.target.value)}
           placeholder={`Buscar ${isProducts ? 'produto ou categoria' : 'insumos'}...`}
           className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl outline-none transition-all"
-          style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', boxShadow: 'var(--surface-box)' }}
-          onFocus={e => (e.currentTarget.style.borderColor = '#6366F1')}
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--surface-box)' }}
+          onFocus={e => (e.currentTarget.style.borderColor = COLORS.accent)}
           onBlur={e => (e.currentTarget.style.borderColor = 'var(--border)')}
         />
       </div>

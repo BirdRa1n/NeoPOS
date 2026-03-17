@@ -15,6 +15,7 @@ import {
   LayoutGrid, List, ImageOff, CheckCircle2, XCircle,
   AlertTriangle, Loader2
 } from 'lucide-react';
+import { COLORS, ALPHA } from '@/lib/constants';
 import { useIsDark } from '@/hooks/useIsDark';
 
 type ViewMode = 'grid' | 'list';
@@ -68,7 +69,7 @@ export function ProductsView() {
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
-      <div className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+      <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: COLORS.accent, borderTopColor: 'transparent' }} />
     </div>
   );
 
@@ -85,10 +86,10 @@ export function ProductsView() {
       />
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Total" value={products.length} icon={Package} color="#6366F1" />
-        <StatCard label="Ativos" value={products.filter(p => p.available).length} icon={CheckCircle2} color="#10B981" />
-        <StatCard label="Inativos" value={products.filter(p => !p.available).length} icon={XCircle} color="#EF4444" />
-        <StatCard label="Promoções" value={products.filter(p => p.promotional_price).length} icon={Tag} color="#F59E0B" />
+        <StatCard label="Total" value={products.length} icon={Package} color={COLORS.accent} />
+        <StatCard label="Ativos" value={products.filter(p => p.available).length} icon={CheckCircle2} color={COLORS.success} />
+        <StatCard label="Inativos" value={products.filter(p => !p.available).length} icon={XCircle} color={COLORS.danger} />
+        <StatCard label="Promoções" value={products.filter(p => p.promotional_price).length} icon={Tag} color={COLORS.warning} />
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
@@ -104,8 +105,8 @@ export function ProductsView() {
             <button key={mode} onClick={() => setViewMode(mode)}
               className="w-8 h-7 flex items-center justify-center rounded-lg transition-all"
               style={{
-                background: viewMode === mode ? (isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.12)') : 'transparent',
-                color: viewMode === mode ? '#818CF8' : 'var(--text-muted)',
+                background: viewMode === mode ? (isDark ? ALPHA.accentBgD : ALPHA.accentBgL) : 'transparent',
+                color: viewMode === mode ? COLORS.accentLight : 'var(--text-muted)',
               }}>
               {mode === 'grid' ? <LayoutGrid size={14} /> : <List size={14} />}
             </button>
@@ -126,7 +127,7 @@ export function ProductsView() {
 
                 {/* Image */}
                 <div className="aspect-square relative overflow-hidden"
-                  style={{ background: isDark ? 'rgba(99,102,241,0.05)' : 'rgba(99,102,241,0.04)' }}>
+                  style={{ background: isDark ? ALPHA.accentBgSubtleD : ALPHA.accentBgSubtleL }}>
                   {primaryImage?.url ? (
                     <img src={primaryImage.url} alt={product.name}
                       className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
@@ -176,16 +177,16 @@ export function ProductsView() {
                   <div className="flex gap-2">
                     <button onClick={() => handleEdit(product)}
                       className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all"
-                      style={{ background: isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.08)', color: '#818CF8' }}
-                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(99,102,241,0.2)' : 'rgba(99,102,241,0.15)'}
-                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(99,102,241,0.12)' : 'rgba(99,102,241,0.08)'}>
+                      style={{ background: isDark ? ALPHA.accentBgSubtleD : ALPHA.accentBgSubtleL, color: COLORS.accentLight }}
+                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? ALPHA.accentBgD : ALPHA.accentBgL}
+                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = isDark ? ALPHA.accentBgSubtleD : ALPHA.accentBgSubtleL}>
                       <Edit size={13} /> Editar
                     </button>
                     <button onClick={() => handleDeleteClick(product)}
                       className="w-9 h-9 flex items-center justify-center rounded-xl text-xs font-semibold transition-all"
-                      style={{ background: isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.08)', color: '#F87171' }}
-                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.15)'}
-                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = isDark ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.08)'}>
+                      style={{ background: isDark ? ALPHA.dangerBgSubtle : ALPHA.dangerBgL, color: COLORS.dangerLight }}
+                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = isDark ? ALPHA.dangerBgD : ALPHA.dangerBgL}
+                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = isDark ? ALPHA.dangerBgSubtle : ALPHA.dangerBgL}>
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -222,10 +223,10 @@ export function ProductsView() {
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-xl overflow-hidden shrink-0 flex items-center justify-center"
-                            style={{ background: isDark ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.05)' }}>
+                            style={{ background: isDark ? ALPHA.accentBgSubtleD : ALPHA.accentBgSubtleL }}>
                             {primaryImage?.url
                               ? <img src={primaryImage.url} alt={product.name} className="w-full h-full object-cover" />
-                              : <Package size={16} style={{ color: '#818CF8', opacity: 0.5 }} />}
+                              : <Package size={16} style={{ color: COLORS.accentLight, opacity: 0.5 }} />}
                           </div>
                           <div>
                             <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>{product.name}</p>
@@ -242,8 +243,8 @@ export function ProductsView() {
                       <td className="px-5 py-4">
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold"
                           style={{
-                            background: product.available ? (isDark ? 'rgba(16,185,129,0.15)' : 'rgba(16,185,129,0.1)') : (isDark ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.1)'),
-                            color: product.available ? (isDark ? '#6EE7B7' : '#065F46') : (isDark ? '#FCA5A5' : '#991B1B'),
+                            background: product.available ? (isDark ? ALPHA.successBgD : ALPHA.successBgL) : (isDark ? ALPHA.dangerBgD : ALPHA.dangerBgL),
+                            color: product.available ? (isDark ? COLORS.successLight : '#065F46') : (isDark ? COLORS.dangerLight : '#991B1B'),
                           }}>
                           <span className="w-1.5 h-1.5 rounded-full" style={{ background: product.available ? '#10B981' : '#EF4444' }} />
                           {product.available ? 'Ativo' : 'Inativo'}
@@ -254,14 +255,14 @@ export function ProductsView() {
                           <button onClick={() => handleEdit(product)}
                             className="w-8 h-8 flex items-center justify-center rounded-xl transition-all"
                             style={{ color: 'var(--text-muted)' }}
-                            onMouseEnter={e => Object.assign((e.currentTarget as HTMLElement).style, { background: 'rgba(99,102,241,0.12)', color: '#818CF8' })}
+                            onMouseEnter={e => Object.assign((e.currentTarget as HTMLElement).style, { background: ALPHA.accentBgSubtleD, color: COLORS.accentLight })}
                             onMouseLeave={e => Object.assign((e.currentTarget as HTMLElement).style, { background: 'transparent', color: 'var(--text-muted)' })}>
                             <Edit size={14} />
                           </button>
                           <button onClick={() => handleDeleteClick(product)}
                             className="w-8 h-8 flex items-center justify-center rounded-xl transition-all"
                             style={{ color: 'var(--text-muted)' }}
-                            onMouseEnter={e => Object.assign((e.currentTarget as HTMLElement).style, { background: 'rgba(239,68,68,0.12)', color: '#F87171' })}
+                            onMouseEnter={e => Object.assign((e.currentTarget as HTMLElement).style, { background: ALPHA.dangerBgSubtle, color: COLORS.dangerLight })}
                             onMouseLeave={e => Object.assign((e.currentTarget as HTMLElement).style, { background: 'transparent', color: 'var(--text-muted)' })}>
                             <Trash2 size={14} />
                           </button>
@@ -299,7 +300,7 @@ export function ProductsView() {
             style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
             <div className="p-7 flex flex-col items-center text-center gap-4">
               <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
-                style={{ background: isDark ? 'rgba(239,68,68,0.12)' : 'rgba(239,68,68,0.07)' }}>
+                style={{ background: isDark ? ALPHA.dangerBgD : ALPHA.dangerBgL }}>
                 <AlertTriangle size={26} style={{ color: '#EF4444' }} />
               </div>
               <div>
@@ -319,7 +320,7 @@ export function ProductsView() {
                 </button>
                 <button onClick={handleDelete} disabled={deleting}
                   className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
-                  style={{ background: 'linear-gradient(135deg,#EF4444,#DC2626)', boxShadow: '0 4px 14px rgba(239,68,68,0.3)' }}>
+                  style={{ background: COLORS.dangerGradient, boxShadow: '0 4px 14px rgba(239,68,68,0.3)' }}>
                   {deleting ? <><Loader2 size={14} className="animate-spin" /> Deletando...</> : <><Trash2 size={14} /> Deletar</>}
                 </button>
               </div>

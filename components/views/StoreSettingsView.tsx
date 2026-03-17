@@ -10,6 +10,7 @@ import {
 } from '@/components/settings';
 import { TeamTab } from '@/components/settings/TeamTab';
 import { useIsDark } from '@/hooks/useIsDark';
+import { COLORS } from '@/lib/constants';
 import {
   SettingsTab, WhatsappStatus, StoreInfo, StoreTheme, WhatsappConfig,
   DEFAULT_STORE_INFO, DEFAULT_THEME, DEFAULT_WHATSAPP,
@@ -214,7 +215,7 @@ export function StoreSettingsView() {
 
   if (!store) return (
     <div className="flex items-center justify-center h-64">
-      <div className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+      <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: COLORS.accent, borderTopColor: 'transparent' }} />
     </div>
   );
 
@@ -229,8 +230,8 @@ export function StoreSettingsView() {
             disabled={saving}
             icon={saving ? <Loader2 size={14} className="animate-spin" /> : saveOk ? <CheckCircle2 size={14} /> : <Save size={14} />}
             style={{
-              background: saveOk ? 'linear-gradient(135deg,#10B981,#059669)' : 'linear-gradient(135deg,#6366F1,#8B5CF6)',
-              boxShadow: '0 4px 14px rgba(99,102,241,0.3)', color: 'white', border: 'none',
+              background: saveOk ? COLORS.successGradient : COLORS.accentGradient,
+              boxShadow: COLORS.accentShadow, color: 'white', border: 'none',
             }}
           >
             {saving ? 'Salvando...' : saveOk ? 'Salvo!' : 'Salvar Alterações'}
