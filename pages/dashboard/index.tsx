@@ -378,7 +378,7 @@ function DashboardHome() {
             >
               <div className="px-3 pb-4 space-y-0.5">
                 {pending.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-10 gap-2">
+                  <div className="flex flex-col items-center justify-center py-10 gap-2 min-h-[32.4vh]">
                     <CheckCircle2 size={28} style={{ color: isDark ? `${COLORS.success}66` : `${COLORS.successDark}4D` }} />
                     <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Nenhum pedido pendente</p>
                   </div>
