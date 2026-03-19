@@ -8,26 +8,37 @@
  *   rodada 1 com os itens e já a envia para a cozinha (send_round).
  * - Para delivery / pickup: comportamento idêntico ao original.
  */
-import { useState, useEffect } from 'react';
-import { useIsDark } from '@/hooks/useIsDark';
-import {
-    X, ArrowUpRight, ShoppingCart, Loader2,
-    User, Phone, MapPin, Banknote, CreditCard,
-    Smartphone, Wallet, CheckSquare, DollarSign, Edit2,
-    Truck, Package, UtensilsCrossed, Minus, Plus,
-} from 'lucide-react';
-import { supabase } from '@/supabase/client';
-import { useStore } from '@/contexts/StoreContext';
-import { useProducts } from '@/hooks/useProducts';
-import { useCustomers } from '@/hooks/useCustomers';
-import { useDeliveryZones, useDeliveryDrivers } from '@/hooks/useDelivery';
-import { formatCurrency } from '@/lib/utils/format';
-import { ProductGrid, CartLineItem } from '@/components/ProductGrid';
-import type { OrderType as StaffOrderType } from '@/contexts/StaffContext';
 import { FormField } from '@/components/forms/FormField';
+import { CartLineItem, ProductGrid } from '@/components/ProductGrid';
 import { Input } from '@/components/ui/Input';
 import { ModalBackdrop } from '@/components/ui/Modal';
-import { COLORS, ALPHA } from '@/lib/constants';
+import type { OrderType as StaffOrderType } from '@/contexts/StaffContext';
+import { useCustomers } from '@/hooks/useCustomers';
+import { useDeliveryDrivers, useDeliveryZones } from '@/hooks/useDelivery';
+import { useIsDark } from '@/hooks/useIsDark';
+import { useProducts } from '@/hooks/useProducts';
+import { COLORS } from '@/lib/constants';
+import { formatCurrency } from '@/lib/utils/format';
+import { supabase } from '@/supabase/client';
+import {
+    ArrowUpRight,
+    Banknote,
+    CheckSquare,
+    CreditCard,
+    DollarSign, Edit2,
+    Loader2,
+    MapPin,
+    Package,
+    Phone,
+    ShoppingCart,
+    Smartphone,
+    Truck,
+    User,
+    UtensilsCrossed,
+    Wallet,
+    X
+} from 'lucide-react';
+import { useState } from 'react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -413,6 +424,7 @@ export function OrderModal({ storeId, onClose, onSuccess, canCreateTypes }: Orde
                                     placeholder="Ex: 5, A3, Varanda..."
                                     className="input-field"
                                     style={{ ...selStyle }}
+                                    type='number'
                                 />
                                 <p style={{ fontSize: 11, marginTop: 6, color: 'var(--text-muted)' }}>
                                     Os itens serão enviados para a cozinha como <strong style={{ color: '#818CF8' }}>Rodada 1</strong>.

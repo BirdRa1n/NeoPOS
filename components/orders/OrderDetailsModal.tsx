@@ -228,6 +228,27 @@ export function OrderDetailsModal({ order: initialOrder, drivers, onClose, onSta
               </div>
             </Section>
 
+            {/* Endereço de entrega */}
+            {isDelivery && (
+              <Section label="Endereço de entrega" color={COLORS.accent}>
+                <div className="p-4 rounded-xl" style={{ background: 'var(--input-bg)', border: '1px solid var(--border)' }}>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                    {order?.delivery_address || 'Endereço não informado'}
+                  </p>
+                  {order?.delivery_complement && (
+                    <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
+                      {order.delivery_complement}
+                    </p>
+                  )}
+                  {order?.reference && (
+                    <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
+                      Referência: {order.reference}
+                    </p>
+                  )}
+                </div>
+              </Section>
+            )}
+
             {/* Itens */}
             <div>
               <div className="flex items-center justify-between gap-3 mb-3">
