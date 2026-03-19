@@ -89,6 +89,13 @@ body{background:var(--bg);color:var(--tx);-webkit-font-smoothing:antialiased}
 @keyframes spin{to{transform:rotate(360deg)}}
 .skeleton{background:linear-gradient(90deg,rgba(0,0,0,.06) 25%,rgba(0,0,0,.04) 50%,rgba(0,0,0,.06) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px}
 @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.prod-section-header{display:flex;align-items:center;gap:12px;margin-bottom:12px;margin-top:0}
+.prod-section-tag{font-size:13px;font-weight:700;white-space:nowrap;padding:4px 12px;border-radius:999px;background:color-mix(in srgb,var(--p) 12%,transparent);color:var(--p)}
+.promo-tag{background:color-mix(in srgb,var(--p) 15%,transparent);color:var(--p)}
+.prod-section-line{flex:1;height:1.5px;background:rgba(0,0,0,.07);border-radius:999px}
+.promo-scroll{display:flex;gap:12px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.promo-scroll::-webkit-scrollbar{display:none}
+.promo-scroll .prod-card{min-width:160px;max-width:160px;flex-shrink:0}
 .empty{text-align:center;padding:48px 24px;color:rgba(0,0,0,.35)}
 @media(max-width:480px){.prod-grid{grid-template-columns:repeat(2,1fr)}}
 `;
