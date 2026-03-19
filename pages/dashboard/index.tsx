@@ -4,6 +4,7 @@ import { MetricCard } from '@/components/dashboard/MetricCard';
 import { SectionCard } from '@/components/dashboard/SectionCard';
 import { StatusBadge } from '@/components/dashboard/StatusBadge';
 import { IncompleteOnboarding } from '@/components/IncompleteOnboarding';
+import { LicenseBanner } from '@/components/LicenseBanner';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { StaffBlockedScreen } from '@/components/StaffBlockedScreen';
 import { LicenseBlockedScreen } from '@/components/LicenseBlockedScreen';
@@ -752,23 +753,12 @@ function DashboardContent({ user, store, storeResolved, activeTab, setActiveTab,
           style={{ marginLeft: isMobile ? 0 : (collapsed ? 72 : 240) }}
         >
           <Topbar onToggle={() => setCollapsed(c => !c)} title={title} subtitle={subtitle} />
-          {license?.status === 'grace' && (
-            <div style={{
-              background: '#EF4444', color: '#fff',
-              fontSize: 12, fontWeight: 600,
-              textAlign: 'center', padding: '6px 16px',
-            }}>
-              ⚠ Seu plano expirou — período de graça ativo ({license.days_remaining} dia{license.days_remaining !== 1 ? 's' : ''} restante{license.days_remaining !== 1 ? 's' : ''}). Acesse Configurações → Licença para renovar.
-            </div>
-          )}
-          {license?.status === 'active' && license.days_remaining <= 7 && (
-            <div style={{
-              background: '#F59E0B', color: '#fff',
-              fontSize: 12, fontWeight: 600,
-              textAlign: 'center', padding: '6px 16px',
-            }}>
-              Seu plano expira em {license.days_remaining} dia{license.days_remaining !== 1 ? 's' : ''}. Acesse Configurações → Licença para renovar.
-            </div>
+          {license && (
+            <LicenseBanner
+              license={license}
+              isOwner={userRole === 'owner'}
+              onGoToLicense={() => setActiveTab('settings')}
+            />
           )}
           <main className="flex-1 overflow-y-auto p-6">
             {renderView()}

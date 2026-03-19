@@ -1,22 +1,27 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/supabase/client';
 import { useStore } from '@/contexts/StoreContext';
+import { supabase } from '@/supabase/client';
+import { useCallback, useEffect, useState } from 'react';
 
 export interface LicenseStatus {
-  status: 'active' | 'inactive' | 'suspended' | 'grace';
-  expires_at: string | null;
-  grace_until: string | null;
+  status:        'active' | 'inactive' | 'suspended' | 'grace';
+  is_trial:      boolean;
+  expires_at:    string | null;
+  grace_until:   string | null;
+  trial_ends_at: string | null;
+  paid_since:    string | null;
   days_remaining: number;
+  /** null = sem aviso, 'trial_expiring' | 'trial_grace' | 'paid_expiring' | 'paid_grace' */
+  warning_type:  'trial_expiring' | 'trial_grace' | 'paid_expiring' | 'paid_grace' | null;
   last_renewed_at: string | null;
 }
 
 export interface RedemptionRecord {
-  id: string;
-  days_added: number;
+  id:              string;
+  days_added:      number;
   previous_expiry: string | null;
-  new_expiry: string;
-  redeemed_at: string;
+  new_expiry:      string;
+  redeemed_at:     string;
 }
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -29,10 +34,10 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 export function useLicense() {
   const { store } = useStore();
-  const [license, setLicense] = useState<LicenseStatus | null>(null);
+  const [license, setLicense]         = useState<LicenseStatus | null>(null);
   const [redemptions, setRedemptions] = useState<RedemptionRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [redeeming, setRedeeming] = useState(false);
+  const [loading, setLoading]         = useState(true);
+  const [redeeming, setRedeeming]     = useState(false);
 
   const fetchLicense = useCallback(async () => {
     if (!store) { setLoading(false); return; }
@@ -69,7 +74,7 @@ export function useLicense() {
     fetchRedemptions();
   }, [fetchLicense, fetchRedemptions]);
 
-  const redeemKey = async (code: string): Promise<{ success: boolean; message: string; daysAdded?: number; expiresAt?: string }> => {
+  const redeemKey = async (code: string) => {
     if (!store) return { success: false, message: 'Loja não encontrada.' };
     setRedeeming(true);
     try {
@@ -80,8 +85,7 @@ export function useLicense() {
       if (error) throw error;
       const result = data as any;
       if (!result.success) {
-        const msg = ERROR_MESSAGES[result.error] ?? 'Erro desconhecido. Tente novamente.';
-        return { success: false, message: msg };
+        return { success: false, message: ERROR_MESSAGES[result.error] ?? 'Erro desconhecido.' };
       }
       await fetchLicense();
       await fetchRedemptions();
@@ -90,6 +94,7 @@ export function useLicense() {
         message:   `${result.days_added} dias adicionados com sucesso!`,
         daysAdded: result.days_added,
         expiresAt: result.expires_at,
+        wasTrial:  result.was_trial,
       };
     } catch (err: any) {
       return { success: false, message: err.message ?? 'Erro ao resgatar código.' };
