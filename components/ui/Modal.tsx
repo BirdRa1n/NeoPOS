@@ -12,7 +12,7 @@ interface ModalBackdropProps {
 export function ModalBackdrop({ onClose, children }: ModalBackdropProps) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
       style={{ background: ALPHA.overlayLight, backdropFilter: ALPHA.backdropBlur }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
@@ -29,11 +29,11 @@ interface ModalShellProps {
 export function ModalShell({ children, maxW = 'max-w-lg' }: ModalShellProps) {
   return (
     <div
-      className={`w-full ${maxW} max-h-[92vh] flex flex-col rounded-2xl overflow-hidden`}
+      className={`w-full ${maxW} max-h-[96vh] sm:max-h-[92vh] flex flex-col overflow-hidden rounded-t-[20px] sm:rounded-2xl`}
       style={{
         background: 'var(--modal-bg)',
         border: '1px solid var(--border)',
-        boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+        boxShadow: '0 -8px 40px rgba(0,0,0,0.5)',
       }}
     >
       {children}

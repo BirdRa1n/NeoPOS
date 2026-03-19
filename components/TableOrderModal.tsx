@@ -305,7 +305,7 @@ export function TableOrderModal({ order, onClose, onUpdated }: TableOrderModalPr
                 </div>
 
                 {/* Body */}
-                <div className="flex-1 overflow-y-auto min-h-0">
+                <div className={`flex-1 min-h-0 ${view === 'new-round' ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'}`}>
 
                     {/* ══ VIEW: ROUNDS ══ */}
                     {view === 'rounds' && (
@@ -365,8 +365,8 @@ export function TableOrderModal({ order, onClose, onUpdated }: TableOrderModalPr
 
                     {/* ══ VIEW: NOVA RODADA ══ */}
                     {view === 'new-round' && (
-                        <div className="flex flex-col" style={{ height: '100%' }}>
-                            <div className="flex-1 overflow-y-auto p-4">
+                        <>
+                            <div className="flex-1 overflow-y-auto p-4 min-h-0">
                                 <ProductGrid
                                     products={products}
                                     cart={draftCart}
@@ -406,7 +406,7 @@ export function TableOrderModal({ order, onClose, onUpdated }: TableOrderModalPr
                                     </button>
                                 )}
                             </div>
-                        </div>
+                        </>
                     )}
 
                     {/* ══ VIEW: CHECKOUT ══ */}

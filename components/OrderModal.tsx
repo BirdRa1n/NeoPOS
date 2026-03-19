@@ -250,10 +250,10 @@ export function OrderModal({ storeId, onClose, onSuccess, canCreateTypes }: Orde
 
     if (step === 1) return (
         <ModalBackdrop onClose={onClose}>
-            <div style={{
+            <div className="rounded-t-[20px] sm:rounded-2xl" style={{
                 position: 'relative', display: 'flex', flexDirection: 'column',
                 background: 'var(--modal-bg)', border: '1px solid var(--border)',
-                borderRadius: 20, boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
+                boxShadow: '0 -8px 40px rgba(0,0,0,0.5)',
                 width: '100%', maxWidth: 680, height: '90vh', maxHeight: 800, overflow: 'hidden',
             }}>
                 {/* Header */}
@@ -330,10 +330,10 @@ export function OrderModal({ storeId, onClose, onSuccess, canCreateTypes }: Orde
 
     return (
         <ModalBackdrop onClose={onClose}>
-            <div style={{
+            <div className="rounded-t-[20px] sm:rounded-2xl" style={{
                 position: 'relative', display: 'flex', flexDirection: 'column',
                 background: 'var(--modal-bg)', border: '1px solid var(--border)',
-                borderRadius: 20, boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
+                boxShadow: '0 -8px 40px rgba(0,0,0,0.5)',
                 width: '100%', maxWidth: 600, height: '90vh', maxHeight: 800, overflow: 'hidden',
             }}>
                 {/* Header */}

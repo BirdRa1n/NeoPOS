@@ -286,10 +286,10 @@ export function RoleEditorModal({ role, storeId, isDark, onClose, onSaved }: Rol
     form.perm_orders_edit || form.perm_orders_delete;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
       style={{ background: ALPHA.overlayMd, backdropFilter: 'blur(4px)' }}>
-      <div className="w-full max-w-lg rounded-2xl overflow-hidden flex flex-col max-h-[92vh]"
-        style={{ background: isDark ? '#0D1019' : '#fff', border: '1px solid var(--border)', boxShadow: '0 24px 80px rgba(0,0,0,0.4)' }}>
+      <div className="w-full sm:max-w-lg overflow-hidden flex flex-col max-h-[96vh] sm:max-h-[92vh] rounded-t-[20px] sm:rounded-2xl"
+        style={{ background: isDark ? '#0D1019' : '#fff', border: '1px solid var(--border)', boxShadow: '0 -8px 40px rgba(0,0,0,0.4)' }}>
 
         {/* Header */}
         <div className="flex items-center justify-between p-5 shrink-0" style={{ borderBottom: '1px solid var(--border)' }}>

@@ -428,16 +428,17 @@ export function ProductFormModal({ isOpen, onClose, product, onSuccess }: Produc
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4"
-        style={{ background: ALPHA.overlayMd, backdropFilter: ALPHA.backdropBlur }}
-        onClick={e => e.target === e.currentTarget && onClose()}
-      >
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+          style={{ background: ALPHA.overlayMd, backdropFilter: ALPHA.backdropBlur }}
+          onClick={e => e.target === e.currentTarget && onClose()}
+        >
         {/* Dialog */}
         <div
-          className="relative w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl overflow-hidden shadow-[var(--surface-box)]"
+          className="relative w-full sm:max-w-2xl max-h-[96vh] sm:max-h-[90vh] flex flex-col overflow-hidden shadow-[var(--surface-box)] rounded-t-[20px] sm:rounded-2xl"
           style={{
             background: 'var(--bg)',
             border: '1px solid var(--border)',
+            boxShadow: '0 -8px 40px rgba(0,0,0,0.5)',
           }}
         >
           {/* Header */}
