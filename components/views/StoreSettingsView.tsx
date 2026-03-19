@@ -19,13 +19,21 @@ import {
 const db = () => supabase.schema('core');
 const catalog = () => supabase.schema('catalog');
 
-export function StoreSettingsView() {
+interface StoreSettingsViewProps {
+  initialTab?: SettingsTab;
+}
+
+export function StoreSettingsView({ initialTab }: StoreSettingsViewProps = {}) {
   const isDark = useIsDark();
   const { store, refetch } = useStore();
 
   const [saving, setSaving] = useState(false);
   const [saveOk, setSaveOk] = useState(false);
-  const [activeTab, setActiveTab] = useState<SettingsTab>('info');
+  const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab ?? 'info');
+
+  useEffect(() => {
+    if (initialTab) setActiveTab(initialTab);
+  }, [initialTab]);
 
   const [info, setInfo] = useState<StoreInfo>(DEFAULT_STORE_INFO);
   const [theme, setTheme] = useState<StoreTheme>(DEFAULT_THEME);

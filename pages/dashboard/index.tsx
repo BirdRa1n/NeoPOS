@@ -570,6 +570,7 @@ export default function DashboardPage() {
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
+  const [settingsInitialTab, setSettingsInitialTab] = useState<'license' | undefined>(undefined);
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -600,6 +601,8 @@ export default function DashboardPage() {
           storeResolved={storeResolved}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
+          settingsInitialTab={settingsInitialTab}
+          setSettingsInitialTab={setSettingsInitialTab}
           collapsed={collapsed}
           setCollapsed={setCollapsed}
           isMobile={isMobile}
@@ -611,12 +614,14 @@ export default function DashboardPage() {
 }
 
 // ─── DashboardContent ─────────────────────────────────────────────────────────
-function DashboardContent({ user, store, storeResolved, activeTab, setActiveTab, collapsed, setCollapsed, isMobile, signOut }: {
+function DashboardContent({ user, store, storeResolved, activeTab, setActiveTab, settingsInitialTab, setSettingsInitialTab, collapsed, setCollapsed, isMobile, signOut }: {
   user: any;
   store: any;
   storeResolved: boolean;
   activeTab: TabId;
   setActiveTab: (tab: TabId) => void;
+  settingsInitialTab: 'license' | undefined;
+  setSettingsInitialTab: (tab: 'license' | undefined) => void;
   collapsed: boolean;
   setCollapsed: (v: boolean | ((p: boolean) => boolean)) => void;
   isMobile: boolean;
@@ -709,7 +714,7 @@ function DashboardContent({ user, store, storeResolved, activeTab, setActiveTab,
       case 'delivery': return <DeliveryView />;
       case 'inventory': return <InventoryView />;
       case 'finance': return <FinanceView />;
-      case 'settings': return <StoreSettingsView />;
+      case 'settings': return <StoreSettingsView initialTab={settingsInitialTab} />;
     }
   };
 
@@ -757,7 +762,12 @@ function DashboardContent({ user, store, storeResolved, activeTab, setActiveTab,
             <LicenseBanner
               license={license}
               isOwner={userRole === 'owner'}
-              onGoToLicense={() => setActiveTab('settings')}
+              onGoToLicense={() => {
+                setSettingsInitialTab('license');
+                setActiveTab('settings');
+                // reset para não forçar a aba em visitas futuras
+                setTimeout(() => setSettingsInitialTab(undefined), 0);
+              }}
             />
           )}
           <main className="flex-1 overflow-y-auto p-6">
