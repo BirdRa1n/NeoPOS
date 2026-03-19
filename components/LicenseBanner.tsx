@@ -7,6 +7,7 @@ interface LicenseBannerProps {
   license: LicenseStatus;
   isOwner: boolean;
   onAcquire?: () => void;
+  onGoToLicense?: () => void;
 }
 
 // Formata o tempo restante de forma inteligente:
@@ -70,7 +71,7 @@ const BANNER_CFG = {
   },
 } as const;
 
-export function LicenseBanner({ license, isOwner, onAcquire }: LicenseBannerProps) {
+export function LicenseBanner({ license, isOwner, onAcquire, onGoToLicense }: LicenseBannerProps) {
   const [dismissed, setDismissed] = useState(false);
 
   if (!isOwner)              return null;
@@ -99,9 +100,9 @@ export function LicenseBanner({ license, isOwner, onAcquire }: LicenseBannerProp
       <Icon size={14} style={{ flexShrink: 0 }} />
       <span>{cfg.message(license)}</span>
 
-      {onAcquire && (
+      {(onAcquire ?? onGoToLicense) && (
         <button
-          onClick={onAcquire}
+          onClick={onAcquire ?? onGoToLicense}
           style={{
             display: 'flex',
             alignItems: 'center',
