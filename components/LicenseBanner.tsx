@@ -6,41 +6,71 @@ import { useState } from 'react';
 interface LicenseBannerProps {
   license: LicenseStatus;
   isOwner: boolean;
-  onGoToLicense?: () => void;
+  onAcquire?: () => void;
+}
+
+// Formata o tempo restante de forma inteligente:
+// > 1 dia  → "X dias"
+// < 1 dia  → "Xh Ymin"
+// < 1 hora → "Xmin"
+function formatTimeRemaining(isoDate: string): string {
+  const diff = new Date(isoDate).getTime() - Date.now();
+  if (diff <= 0) return '0min';
+
+  const totalMinutes = Math.floor(diff / 60000);
+  const totalHours   = Math.floor(diff / 3600000);
+  const days         = Math.floor(diff / 86400000);
+
+  if (days >= 1) {
+    return `${days} dia${days !== 1 ? 's' : ''}`;
+  }
+  if (totalHours >= 1) {
+    const mins = totalMinutes % 60;
+    return mins > 0 ? `${totalHours}h ${mins}min` : `${totalHours}h`;
+  }
+  return `${totalMinutes}min`;
 }
 
 const BANNER_CFG = {
   trial_expiring: {
-    bg:      '#F59E0B',
-    icon:    Clock,
-    message: (days: number) =>
-      `Seu período de teste expira em ${days} dia${days !== 1 ? 's' : ''}.`,
+    bg:   '#F59E0B',
+    icon: Clock,
+    message: (license: LicenseStatus) => {
+      const t = formatTimeRemaining(license.expires_at!);
+      return `Seu período de teste expira em ${t}.`;
+    },
     cta: 'Adquirir licença',
   },
   trial_grace: {
-    bg:      '#EF4444',
-    icon:    AlertTriangle,
-    message: (days: number) =>
-      `Período de teste encerrado. ${days} dia${days !== 1 ? 's' : ''} de graça restante${days !== 1 ? 's' : ''}.`,
+    bg:   '#EF4444',
+    icon: AlertTriangle,
+    message: (license: LicenseStatus) => {
+      const t = formatTimeRemaining(license.grace_until!);
+      return `Período de teste encerrado. ${t} de graça restante${license.grace_until ? '' : 's'}.`;
+    },
     cta: 'Adquirir licença',
   },
   paid_expiring: {
-    bg:      '#F59E0B',
-    icon:    Clock,
-    message: (days: number) =>
-      `Seu plano expira em ${days} dia${days !== 1 ? 's' : ''}.`,
+    bg:   '#F59E0B',
+    icon: Clock,
+    message: (license: LicenseStatus) => {
+      const t = formatTimeRemaining(license.expires_at!);
+      return `Seu plano expira em ${t}.`;
+    },
     cta: 'Adquirir licença',
   },
   paid_grace: {
-    bg:      '#EF4444',
-    icon:    AlertTriangle,
-    message: (days: number) =>
-      `Plano expirado. ${days} dia${days !== 1 ? 's' : ''} de graça restante${days !== 1 ? 's' : ''}.`,
+    bg:   '#EF4444',
+    icon: AlertTriangle,
+    message: (license: LicenseStatus) => {
+      const t = formatTimeRemaining(license.grace_until!);
+      return `Plano expirado. ${t} de graça restante.`;
+    },
     cta: 'Adquirir licença',
   },
 } as const;
 
-export function LicenseBanner({ license, isOwner, onGoToLicense }: LicenseBannerProps) {
+export function LicenseBanner({ license, isOwner, onAcquire }: LicenseBannerProps) {
   const [dismissed, setDismissed] = useState(false);
 
   if (!isOwner)              return null;
@@ -67,11 +97,11 @@ export function LicenseBanner({ license, isOwner, onGoToLicense }: LicenseBanner
       position: 'relative',
     }}>
       <Icon size={14} style={{ flexShrink: 0 }} />
-      <span>{cfg.message(license.days_remaining)}</span>
+      <span>{cfg.message(license)}</span>
 
-      {onGoToLicense && (
+      {onAcquire && (
         <button
-          onClick={onGoToLicense}
+          onClick={onAcquire}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -92,7 +122,6 @@ export function LicenseBanner({ license, isOwner, onGoToLicense }: LicenseBanner
         </button>
       )}
 
-      {/* Só mostra o X nos avisos de "expirando" — graça não pode ser dispensado */}
       {!isGrace && (
         <button
           onClick={() => setDismissed(true)}

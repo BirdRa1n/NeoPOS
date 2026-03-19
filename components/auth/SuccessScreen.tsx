@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
 import { Check, ArrowRight } from 'lucide-react';
 
 export function SuccessScreen() {
-  const router = useRouter();
   const [countdown, setCountdown] = useState(5);
   const r = 28;
   const circ = 2 * Math.PI * r;
 
   useEffect(() => {
     const interval = setInterval(() => setCountdown(c => c - 1), 1000);
-    const timeout = setTimeout(() => router.push('/dashboard'), 5000);
+    const timeout = setTimeout(() => { window.location.href = '/'; }, 5000);
     return () => { clearInterval(interval); clearTimeout(timeout); };
   }, []);
 
@@ -46,7 +44,7 @@ export function SuccessScreen() {
           <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 1 }}>seg</span>
         </div>
       </div>
-      <button onClick={() => router.push('/dashboard')} className="btn-primary" style={{ width: 'auto', padding: '10px 28px' }}>
+      <button onClick={() => { window.location.href = '/'; }} className="btn-primary" style={{ width: 'auto', padding: '10px 28px' }}>
         <ArrowRight size={15} />Ir agora
       </button>
     </div>
