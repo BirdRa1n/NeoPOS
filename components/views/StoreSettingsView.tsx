@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { Save, Loader2, CheckCircle2 } from 'lucide-react';
 import {
-  SettingsTabs, InfoTab, AppearanceTab, CatalogTab, WhatsappTab,
+  SettingsTabs, InfoTab, AppearanceTab, CatalogTab, WhatsappTab, LicenseTab,
 } from '@/components/settings';
 import { TeamTab } from '@/components/settings/TeamTab';
 import { useIsDark } from '@/hooks/useIsDark';
@@ -224,7 +224,7 @@ export function StoreSettingsView() {
       <PageHeader
         title="Configurações"
         subtitle="Gerencie informações e aparência da loja"
-        action={activeTab !== 'team' ? (
+        action={activeTab !== 'team' && activeTab !== 'license' ? (
           <Button
             onClick={handleSave}
             disabled={saving}
@@ -288,6 +288,8 @@ export function StoreSettingsView() {
       )}
 
       {activeTab === 'team' && <TeamTab storeId={store.id} isDark={isDark} />}
+
+      {activeTab === 'license' && <LicenseTab />}
     </div>
   );
 }

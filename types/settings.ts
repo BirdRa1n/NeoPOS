@@ -1,4 +1,4 @@
-export type SettingsTab = 'info' | 'appearance' | 'catalog' | 'whatsapp' | 'team';
+export type SettingsTab = 'info' | 'appearance' | 'catalog' | 'whatsapp' | 'team' | 'license';
 export type WhatsappStatus = 'disconnected' | 'connecting' | 'connected';
 
 export interface ColorPreset {

@@ -6,6 +6,7 @@ import { StatusBadge } from '@/components/dashboard/StatusBadge';
 import { IncompleteOnboarding } from '@/components/IncompleteOnboarding';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { StaffBlockedScreen } from '@/components/StaffBlockedScreen';
+import { LicenseBlockedScreen } from '@/components/LicenseBlockedScreen';
 import { CustomersView } from '@/components/views/CustomersView';
 import { DeliveryView } from '@/components/views/DeliveryView';
 import { FinanceView } from '@/components/views/FinanceView';
@@ -621,6 +622,7 @@ function DashboardContent({ user, store, storeResolved, activeTab, setActiveTab,
 }) {
   const { theme } = useTheme();
   const { userRole, staffInfo, loading: staffLoading, can, isDriver } = useStaff();
+  const { license } = useStore();
   const { orders: pending } = useOrders('pending');
   const vars = THEMES[theme];
   const router = useRouter();
@@ -641,6 +643,19 @@ function DashboardContent({ user, store, storeResolved, activeTab, setActiveTab,
   // Sem isso, StaffContext resolve userRole=null antes de StoreContext terminar,
   // causando o piscar do IncompleteOnboarding em membros válidos.
   if (!storeResolved || staffLoading) return <LoadingSpinner />;
+
+  // Bloqueia se licença inativa ou suspensa
+  if (license && (license.status === 'inactive' || license.status === 'suspended')) {
+    const cssVars = Object.entries(vars).map(([k, v]) => `${k}:${v}`).join(';');
+    return (
+      <>
+        <style>{`.neopos { ${cssVars}; font-family:'DM Sans',system-ui,sans-serif; }`}</style>
+        <div className="neopos">
+          <LicenseBlockedScreen license={license} />
+        </div>
+      </>
+    );
+  }
 
   // Só mostra IncompleteOnboarding quando temos certeza que não há store nem role
   if (!store && userRole === null) {
@@ -736,6 +751,24 @@ function DashboardContent({ user, store, storeResolved, activeTab, setActiveTab,
           style={{ marginLeft: isMobile ? 0 : (collapsed ? 72 : 240) }}
         >
           <Topbar onToggle={() => setCollapsed(c => !c)} title={title} subtitle={subtitle} />
+          {license?.status === 'grace' && (
+            <div style={{
+              background: '#EF4444', color: '#fff',
+              fontSize: 12, fontWeight: 600,
+              textAlign: 'center', padding: '6px 16px',
+            }}>
+              ⚠ Seu plano expirou — período de graça ativo ({license.days_remaining} dia{license.days_remaining !== 1 ? 's' : ''} restante{license.days_remaining !== 1 ? 's' : ''}). Acesse Configurações → Licença para renovar.
+            </div>
+          )}
+          {license?.status === 'active' && license.days_remaining <= 7 && (
+            <div style={{
+              background: '#F59E0B', color: '#fff',
+              fontSize: 12, fontWeight: 600,
+              textAlign: 'center', padding: '6px 16px',
+            }}>
+              Seu plano expira em {license.days_remaining} dia{license.days_remaining !== 1 ? 's' : ''}. Acesse Configurações → Licença para renovar.
+            </div>
+          )}
           <main className="flex-1 overflow-y-auto p-6">
             {renderView()}
           </main>

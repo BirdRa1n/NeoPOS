@@ -2,6 +2,7 @@ import { supabase } from '@/supabase/client';
 import { Store } from '@/types/database';
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
+import { LicenseStatus } from '@/hooks/useLicense';
 
 interface StoreContextType {
   store: Store | null;
@@ -14,6 +15,7 @@ interface StoreContextType {
    * Permite que StaffProvider busque o role mesmo sem store carregada.
    */
   resolvedStoreId: string | null;
+  license: LicenseStatus | null;
   refetch: () => Promise<void>;
 }
 
@@ -25,6 +27,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [resolved, setResolved] = useState(false);
   const [resolvedStoreId, setResolvedStoreId] = useState<string | null>(null);
+  const [license, setLicense] = useState<LicenseStatus | null>(null);
 
   const fetchStore = async () => {
     if (!user) {
@@ -50,6 +53,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (ownedStore) {
         setStore(ownedStore);
         setResolvedStoreId(ownedStore.id);
+        const { data: licData } = await supabase
+          .schema('billing' as any)
+          .from('store_license_status')
+          .select('*')
+          .eq('store_id', ownedStore.id)
+          .maybeSingle();
+        setLicense(licData as LicenseStatus ?? null);
         return;
       }
 
@@ -78,6 +88,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
           if (memberStore) {
             setStore(memberStore);
+            const { data: licData } = await supabase
+              .schema('billing' as any)
+              .from('store_license_status')
+              .select('*')
+              .eq('store_id', memberStore.id)
+              .maybeSingle();
+            setLicense(licData as LicenseStatus ?? null);
             return;
           }
         }
@@ -106,7 +123,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   return (
-    <StoreContext.Provider value={{ store, loading, resolved, resolvedStoreId, refetch: fetchStore }}>
+    <StoreContext.Provider value={{ store, loading, resolved, resolvedStoreId, license, refetch: fetchStore }}>
       {children}
     </StoreContext.Provider>
   );

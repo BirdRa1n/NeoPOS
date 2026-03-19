@@ -1,4 +1,4 @@
-import { Store, Palette, Globe, MessageCircle, Users } from 'lucide-react';
+import { Store, Palette, Globe, MessageCircle, Users, ShieldCheck } from 'lucide-react';
 import { useIsDark } from '@/hooks/useIsDark';
 import { SettingsTab } from '@/types/settings';
 
@@ -8,6 +8,7 @@ const TABS: { id: SettingsTab; label: string; icon: React.FC<any> }[] = [
   { id: 'catalog',    label: 'Catálogo',    icon: Globe },
   { id: 'whatsapp',   label: 'WhatsApp',    icon: MessageCircle },
   { id: 'team',       label: 'Equipe',      icon: Users },
+  { id: 'license',    label: 'Licença',     icon: ShieldCheck },
 ];
 
 interface SettingsTabsProps {

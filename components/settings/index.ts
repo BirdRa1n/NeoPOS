@@ -8,3 +8,4 @@ export { InfoTab } from './InfoTab';
 export { AppearanceTab } from './AppearanceTab';
 export { CatalogTab } from './CatalogTab';
 export { WhatsappTab } from './WhatsappTab';
+export { LicenseTab } from './LicenseTab';
