@@ -5,8 +5,8 @@ import { PeriodSelector } from '@/components/ui/PeriodSelector';
 import { ViewLoadingSpinner } from '@/components/ui/ViewLoadingSpinner';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useDailySummaries } from '@/hooks/useFinance';
+import { COLORS } from '@/lib/constants';
 import { formatCurrency } from '@/lib/utils/format';
-import { BRAND, COLORS } from '@/lib/constants';
 import { FinanceTotals, Period, PERIOD_DAYS, PERIOD_LABELS } from '@/types/finance';
 import {
   Banknote,
@@ -21,13 +21,22 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 
+/** Retorna a data atual no timezone do browser no formato YYYY-MM-DD */
+function getLocalDate(offsetDays = 0): string {
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const date = new Date(Date.now() - offsetDays * 86400000);
+  return date.toLocaleDateString('en-CA', { timeZone: tz });
+}
+
 export function FinanceView() {
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const [period, setPeriod] = useState<Period>('today');
 
   const days = PERIOD_DAYS[period];
-  const startDate = new Date(Date.now() - (days - 1) * 86400000).toISOString().split('T')[0];
+
+  // ✅ Usa o timezone do browser em vez de UTC
+  const startDate = getLocalDate(days - 1);
   const { summaries, loading } = useDailySummaries(startDate);
 
   const totals: FinanceTotals = summaries.reduce(
