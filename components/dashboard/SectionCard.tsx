@@ -6,11 +6,12 @@ interface SectionCardProps {
   iconColor: string;
   action?: ReactNode;
   children: ReactNode;
+  className?: string;
 }
 
-export function SectionCard({ title, icon: Icon, iconColor, action, children }: SectionCardProps) {
+export function SectionCard({ title, icon: Icon, iconColor, action, children, className }: SectionCardProps) {
   return (
-    <div className="rounded-2xl overflow-hidden"
+    <div className={`rounded-2xl overflow-hidden flex flex-col ${className ?? ''}`}
       style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--surface-box)' }}>
       <div className="flex items-center justify-between px-5 pt-5 pb-4">
         <div className="flex items-center gap-2.5">

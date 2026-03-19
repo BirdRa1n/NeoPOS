@@ -364,8 +364,9 @@ function DashboardHome() {
 
       {can('perm_orders_view' as any) && (
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-          <div className="xl:col-span-2">
+          <div className="xl:col-span-2 flex flex-col">
             <SectionCard
+              className="flex-1 flex flex-col"
               title="Pedidos Pendentes"
               icon={Clock}
               iconColor={COLORS.accent}
@@ -377,7 +378,7 @@ function DashboardHome() {
                 ) : undefined
               }
             >
-              <div className="px-3 pb-4 space-y-0.5">
+              <div className="px-3 pb-4 space-y-0.5 flex-1">
                 {pending.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-10 gap-2 min-h-[32.4vh]">
                     <CheckCircle2 size={28} style={{ color: isDark ? `${COLORS.success}66` : `${COLORS.successDark}4D` }} />
