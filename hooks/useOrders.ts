@@ -57,7 +57,9 @@ export function useOrders(status?: OrderStatus, options?: UseOrdersOptions) {
           filter: `store_id=eq.${store.id}`,
         },
         async (payload) => {
-          // Busca o pedido completo com os joins da view
+          if (payload.new.type === 'table' || payload.new.order_type === 'table') {
+            await new Promise(resolve => setTimeout(resolve, 1500));
+          }
           const { data } = await supabase
             .schema('orders')
             .from('orders_with_details')

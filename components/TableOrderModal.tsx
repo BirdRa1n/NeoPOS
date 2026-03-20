@@ -120,7 +120,8 @@ export function TableOrderModal({ order, onClose, onUpdated }: TableOrderModalPr
 
     // ── Refresh ─────────────────────────────────────────────────────────────────
 
-    const refreshRounds = useCallback(async () => {
+    const refreshRounds = useCallback(async (isNewRound = false) => {
+        if (isNewRound) await new Promise(resolve => setTimeout(resolve, 800));
         const { data } = await supabase
             .schema('orders')
             .from('orders_with_details')
@@ -178,7 +179,7 @@ export function TableOrderModal({ order, onClose, onUpdated }: TableOrderModalPr
             setDraftCart([]);
             setDraftNotes('');
             setView('rounds');
-            await refreshRounds();
+            await refreshRounds(true);
             onUpdated();
         } catch (e: any) {
             alert(e.message ?? 'Erro ao enviar rodada');
